@@ -59,7 +59,7 @@ To effectively recreate the changes bundled with ArcadeEssentials, this list sho
   - Modify the `SetGraphicSetting` ActionScript function in the `pc_graphic_setting.swf` file to remove the third else-if-block `else if (id == 2)`. This is **required** for the Graphics Settings menu to work correctly.
 
 # Disclaimer
-ArcadeEssentials *does not* aim to faithfully recreate or attempt to effectively replace the original Xbox 360 or PlayStation 3 versions of Cars 2: The Video Game. Many core gameplay aspects, such as physics, UI speed, gamemode scores, story progression, etc., may significantly differ from the base game, **or may not function at all**. Namely, Multiplayer **is not supported** and **there are absolutely zero plans to address this in the future.** Additionally, ArcadeEssentials makes **absolutely no guarantees** that its featureset will not change over time, so please keep this in mind if you seek to speedrun Arcade with ArcadeEssentials over the official releases. 
+ArcadeEssentials *does not* aim to faithfully recreate or attempt to effectively replace the original Xbox 360 or PlayStation 3 versions of Cars 2: The Video Game. Many core gameplay aspects, such as physics, UI speed, gamemode scores, story progression, etc., may significantly differ from the base game, **or may not function at all**. Additionally, ArcadeEssentials makes **absolutely no guarantees** that its featureset will not change over time, so please keep this in mind if you seek to speedrun Arcade with ArcadeEssentials over the official releases. 
 
 # Credits
 - [Me](https://github.com/itsmeft24) (wrote it lol)
