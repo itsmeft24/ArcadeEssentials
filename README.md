@@ -1,3 +1,9 @@
+<p align="center">
+    <img src="https://raw.githubusercontent.com/itsmeft24/ArcadeEssentials-Private/refs/heads/main/assets/logo.svg" width="512"/>
+</p>
+
+---
+
 # ArcadeEssentials
 A [Pentane](https://github.com/high-octane-dev/pentane) plugin for Cars 2: Arcade (v1.42) that restores a significant amount of critical base game functionality. Made with love by [itsmeft24](https://github.com/itsmeft24)!
 
