@@ -1,421 +1,255 @@
-#pragma once
 #include <cstdint>
 #include <array>
 #include <thread>
 #include <atomic>
-#include <cwctype>
+#include <cstring>
 #include <Windows.h>
-#include <initguid.h>
-#include <cfgmgr32.h>
-#include <dbt.h>
-#include <hidsdi.h>
-#include <Hidclass.h>
-#include <Xinput.h>
+#include <SDL3/SDL_init.h>
+#include <SDL3/SDL_hints.h>
+#include <SDL3/SDL_gamepad.h>
+#include <SDL3/SDL_events.h>
 #include "WindowsSystemInputDriver.hpp"
-#include "WindowsControllerInputDriver.hpp"
-#include "XInputInputDriver.hpp"
+#include "SDL3ControllerDriver.hpp"
 #include "KeyControllerInputDriver.hpp"
-#include "VirtualController.hpp"
+#include "../../Game/CMessage.hpp"
+#include "../../Game/FrontEnd/CarsFrontEnd.hpp"
 #include "../../pentane.hpp"
 
 inline auto CMasterTimer_GetOSTime = (std::uint32_t(_cdecl*)())(0x00770280);
-inline auto IsXInputDevice = (bool(_cdecl*)(const GUID*))(0x00816850);
-inline auto getINIFileName = (void(_cdecl*)(char*))(0x00814eb0);
+inline auto _DirectInput8Create = (HRESULT(__stdcall*)(HINSTANCE, DWORD, const IID&, LPVOID*, LPUNKNOWN))(0x013c0fc4);
 
-bool FIRST_INIT = true;
-wchar_t DEVICE_PATH_DROPPED[260] = {};
-std::atomic<bool> CHECK_FOR_DI_NEW_CONTROLLERS = true;
-std::atomic<bool> DEVICE_DROPPED = false;
-std::atomic<std::uint32_t> LAST_DI_CHECK_TIMESTAMP = 0;
-std::atomic<std::uint32_t> LAST_XI_CHECK_TIMESTAMP = 0;
-std::atomic<HCMNOTIFICATION> DI_CHECK_NOTIFICATION_HANDLE{};
+inline const DIDATAFORMAT* _c_dfDIMouse2 = reinterpret_cast<const DIDATAFORMAT*>(0x016adb6c);
+inline const DIDATAFORMAT* _c_dfDIKeyboard = reinterpret_cast<const DIDATAFORMAT*>(0x016ad964);
 
-bool iequals(std::wstring_view lhs, std::wstring_view rhs) {
-	if (lhs.size() != rhs.size()) {
-		return false;
-	}
-	for (std::size_t i = 0; i < lhs.size(); ++i) {
-		if (std::towlower(lhs[i]) != std::towlower(rhs[i])) {
-			return false;
-		}
-	}
-	return true;
-}
+std::atomic<std::uint32_t> LAST_CONTROLLER_CHECK_TIMESTAMP = 0;
 
-int __stdcall WindowsSystemInputDriver_EnumJoysticks(const DIDEVICEINSTANCEA* devInst, void* udata) {
-
-	WindowsSystemInputDriver* _this = reinterpret_cast<WindowsSystemInputDriver*>(udata);
-
-	if (IsXInputDevice(&devInst->guidProduct)) {
-		return DIENUM_CONTINUE;
-	}
-
-	if (strstr(devInst->tszProductName, "Nintendo RVL-CNT") != nullptr) {
-		return DIENUM_CONTINUE;
-	}
-
-	DWORD devType = devInst->dwDevType & 0xff;
-	if (devType != DI8DEVTYPE_GAMEPAD && devType != DI8DEVTYPE_JOYSTICK) {
-		return DIENUM_CONTINUE;
-	}
-
-	if (_this->controllers >= 11) {
-		return DIENUM_STOP;
-	}
-
-	for (int i = 0; i < _this->controllers; i++) {
-		const char* identity = _this->controller[i]->Identify();
-		if (std::string_view(identity) == "DirectInput") {
-			DIDEVICEINSTANCEA currInst{};
-			currInst.dwSize = sizeof(DIDEVICEINSTANCEA);
-			reinterpret_cast<WindowsControllerInputDriver*>(_this->controller[i])->m_device->GetDeviceInfo(&currInst);
-			if (currInst.guidInstance == devInst->guidInstance) {
-				logger::log_format("[WindowsSystemInputDriver::EnumJoysticks] Device: {} ({}) already added, skipping...", devInst->tszProductName, i);
-				return DIENUM_CONTINUE;
-			}
-		}
-	}
-
-	int iControllerUniqueIndex = 0;
-	char sDeviceName[256]{};
-	strcpy_s(sDeviceName, devInst->tszInstanceName);
-	getINIFileName(sDeviceName);
-	strcat_s(sDeviceName, "_");
-	std::array<char[260], 11>* s_buttonMapFile = reinterpret_cast<std::array<char[260], 11>*>(0x018d2608);
-
-	for (int i = 0; i < _this->controllers; i++) {
-		if (strstr(s_buttonMapFile->at(i), sDeviceName) != nullptr) {
-			iControllerUniqueIndex++;
-		}
-	}
-	sprintf_s(sDeviceName, "%s%d", sDeviceName, 0 /* iControllerUniqueIndex */);
-	strcat_s(sDeviceName, ".ini");
-	strcpy_s(s_buttonMapFile->at(_this->controllers), sDeviceName);
-
-	IDirectInputDevice8A* device = nullptr;
-	if (_this->dInput->CreateDevice(devInst->guidInstance, &device, nullptr) != DI_OK) {
-		return DIENUM_CONTINUE;
-	}
-
-	DIDEVCAPS caps{};
-	caps.dwSize = sizeof(DIDEVCAPS);
-	device->GetCapabilities(&caps);
-	if (caps.dwAxes < 3) {
-		device->Unacquire();
-		device->Release();
-		logger::log_format("[WindowsSystemInputDriver::EnumJoysticks] Device: {}_{} was ignored as it has less than 3 axes.", devInst->tszInstanceName, iControllerUniqueIndex);
-		return DIENUM_CONTINUE;
-	}
-
-	if (FAILED(device->SetDataFormat(&c_dfDIJoystick2))) {
-		device->Unacquire();
-		device->Release();
-		logger::log_format("[WindowsSystemInputDriver::EnumJoysticks] Device: {}_{} was ignored as ::SetDataFormat returned an error.", devInst->tszInstanceName, iControllerUniqueIndex);
-		return DIENUM_CONTINUE;
-	}
-
-	SetActiveWindow(_this->hWnd);
-	device->SetCooperativeLevel(_this->hWnd, DISCL_NONEXCLUSIVE | DISCL_BACKGROUND);
-
-	_this->controller[_this->controllers] = new WindowsControllerInputDriver(_this->hWnd, device, _this->controllers, devInst->tszInstanceName);
-	
-	if (_this->controller[_this->controllers]->m_bInvalidController != 0) {
-		delete _this->controller[_this->controllers];
-		_this->controller[_this->controllers] = nullptr;
-		logger::log_format("[WindowsSystemInputDriver::EnumJoysticks] Device: {}_{} was ignored as it does not have a profile saved in `AppData`.", devInst->tszInstanceName, iControllerUniqueIndex);
-		return DIENUM_CONTINUE;
-	}
-
-	logger::log_format("[WindowsSystemInputDriver::EnumJoysticks] Device: {}_{} mapped to index: {}!", devInst->tszInstanceName, iControllerUniqueIndex, _this->controllers);
-	_this->controllers++;
-	return DIENUM_CONTINUE;
-}
-
-void BumpKBMToSlot0(WindowsSystemInputDriver* _this) {
-	int kbm = -1;
-	for (int i = 0; i < 11; i++) {
-		if (_this->controller[i] != nullptr && _this->controller[i] == _this->d_pKeyboard) {
-			kbm = i;
-		}
-	}
-	if (kbm != -1) {
-		logger::log_format("[WindowsSystemInputDriver::BeginInput] Bumped Keyboard to 0!");
-		ControllerInputDriver* oldPlayerOne = _this->controller[0];
-		_this->controller[0] = _this->controller[kbm];
-		_this->controller[kbm] = oldPlayerOne;
-	}
-	else {
-		logger::log_format("[WindowsSystemInputDriver::BeginInput] Unable to find Keyboard Controller!");
-	}
-}
-
-void DetachSharedController(WindowsSystemInputDriver* _this, ControllerInputDriver* controller) {
-	for (int i = 0; i < 11; i++) {
-		if (_this->controller[i] != nullptr) {
-			if (_this->controller[i]->GetSharedController() == controller) {
-				_this->controller[i]->SetSharedController(nullptr);
-			}
-		}
-	}
-}
-
-void OnXInputControllerRemoved(WindowsSystemInputDriver* _this, std::uint32_t id) {
-	for (int i = 0; i < 11; i++) {
-		if (_this->controller[i] != nullptr) {
-			if (std::string_view(_this->controller[i]->Identify()) == "XInput") {
-				std::uint32_t currentId = *reinterpret_cast<std::uint32_t*>(reinterpret_cast<std::uintptr_t>(_this->controller[i]) + 0x26C);
-				if (currentId == id) {
-					logger::log_format("[WindowsSystemInputDriver::BeginInput] XUser Disconnected! ID: {}", id);
-					DetachSharedController(_this, _this->controller[i]);
-					delete _this->controller[i];
-					_this->controller[i] = nullptr;
-					_this->controllers--;
-					if (i == 0) {
-						BumpKBMToSlot0(_this);
-					}
+// Helper function to see if a newly discovered SDL Gamepad is already active in one of our slots
+bool IsSDLGamepadAlreadyMapped(WindowsSystemInputDriver* driver, SDL_JoystickID id) {
+	for (auto i = 0; i < MAX_CONTROLLERS; i++) {
+		if (driver->controller[i] != nullptr) {
+			if (std::string_view(driver->controller[i]->Identify()) == "SDL3 Controller") {
+				SDL3ControllerDriver* device = reinterpret_cast<SDL3ControllerDriver*>(driver->controller[i]);
+				if (device->m_gamepad && SDL_GetGamepadID(device->m_gamepad) == id) {
+					return true;
 				}
 			}
 		}
 	}
+	return false;
 }
 
-void OnDirectInputControllerRemoved(WindowsSystemInputDriver* _this, const std::wstring_view devicePath) {
-	for (int i = 0; i < 11; i++) {
-		if (_this->controller[i] != nullptr) {
-			if (std::string_view(_this->controller[i]->Identify()) == "DirectInput") {
-				if (iequals(reinterpret_cast<WindowsControllerInputDriver*>(_this->controller[i])->m_devicePath, devicePath)) {
-					logger::log_format("[WindowsSystemInputDriver::BeginInput] Device Disconnected! Name: {} ({})", _this->controller[i]->DeviceName(), i);
-					DetachSharedController(_this, _this->controller[i]);
-					delete _this->controller[i];
-					_this->controller[i] = nullptr;
-					_this->controllers--;
-					if (i == 0) {
-						BumpKBMToSlot0(_this);
-					}
-				}
-			}
+std::optional<int> WindowsSystemInputDriver::FindKBM() {
+	for (auto i = 0; i < MAX_CONTROLLERS; i++) {
+		if (controller[i] != nullptr && controller[i] == d_pKeyboard) {
+			return i;
 		}
 	}
+	return std::nullopt;
 }
 
-void AddXInputController(WindowsSystemInputDriver* _this, std::uint32_t id) {
-	/*
-	for (int i = 0; i < 11; i++) {
-		if (_this->controller[i] != nullptr) {
-			logger::log_format("[Controller States] {}", *reinterpret_cast<std::uintptr_t*>(_this->controller[i]));
+std::optional<int> WindowsSystemInputDriver::FindFirstAvailableControllerSlot() {
+	for (auto i = 0; i < MAX_CONTROLLERS; i++) {
+		if (this->controller[i] == nullptr) {
+			return i;
+		}
+	}
+	return std::nullopt;
+}
+
+void WindowsSystemInputDriver::SwapControllers(int i, int j) {
+	ControllerInputDriver* oldI = controller[i];
+	controller[i] = controller[j];
+	controller[j] = oldI;
+}
+
+void WindowsSystemInputDriver::BeginInputHook() {
+	// If KBM is open and player 0 disconnected, we can move the keyboard there.
+	// (Otherwise, we'll be waiting for a new controller to connect.)
+	if (controller[0] == nullptr) {
+		auto slot = FindKBM();
+		if (slot.has_value()) {
+			if (!IsControllerLocked(slot.value())) {
+				SwapControllers(0, slot.value());
+				LockPlayerToController(0, 0);
+			}
 		}
 		else {
-			logger::log_format("[Controller States] {}", reinterpret_cast<std::uintptr_t>(_this->controller[i]));
+			controller[0] = d_pKeyboard;
+			LockPlayerToController(0, 0);
 		}
-	}
-	*/
-	for (int i = 0; i < 11; i++) {
-		if (_this->controller[i] == nullptr) {
-			/*
-			_this->controller[i] = reinterpret_cast<ControllerInputDriver*>(operator_new(0x4e78));
-			XInputInputDriver_XInputInputDriver(_this->controller[i], id);
-			_this->controllers++;
-			_this->d_pKeyboard->SetSharedController(_this->controller[i]);
-			_this->controller[i]->SetSharedController(_this->d_pKeyboard);
-			logger::log_format("[WindowsSystemInputDriver::BeginInput] Found new XInput controller! ID: {}, Assigned to: {}.", id, i);
-			return;
-			*/
-
-			if (i == 0) {
-				_this->controller[0] = new XInputInputDriver(id);
-				// _this->controller[0]->SetSharedController(_this->d_pKeyboard);
-				_this->d_pKeyboard->SetSharedController(_this->controller[0]);
-				_this->controllers++;
-				logger::log_format("[WindowsSystemInputDriver::BeginInput] Found new XInput controller! ID: {}, Assigned to 0.", id);
-				return;
-			}
-			else {
-				ControllerInputDriver* oldPlayerOne = _this->controller[0];
-				_this->controller[0] = new XInputInputDriver(id);
-				// _this->controller[0]->SetSharedController(_this->d_pKeyboard);
-				_this->d_pKeyboard->SetSharedController(_this->controller[0]);
-				_this->controller[i] = oldPlayerOne;
-				_this->controllers++;
-				logger::log_format("[WindowsSystemInputDriver::BeginInput] Found new XInput controller! ID: {}, Bumped to 0.", id);
-				return;
-			}
-		}
-	}
-}
-
-DWORD __stdcall DIDevicesChangedCallback(HCMNOTIFICATION h, PVOID context, CM_NOTIFY_ACTION action, PCM_NOTIFY_EVENT_DATA data, DWORD eventDataSize) {
-	if (action == CM_NOTIFY_ACTION_DEVICEINTERFACEREMOVAL) {
-		if (DEVICE_DROPPED.load()) {
-			DEVICE_DROPPED.wait(false);
-		}
-		std::wstring_view devicePathView(data->u.DeviceInterface.SymbolicLink);
-		std::copy_n(data->u.DeviceInterface.SymbolicLink, (std::min)(devicePathView.size(), sizeof(DEVICE_PATH_DROPPED) / sizeof(wchar_t)), DEVICE_PATH_DROPPED);
-		DEVICE_DROPPED = true;
-	}
-	else if (action == CM_NOTIFY_ACTION_DEVICEINTERFACEARRIVAL) {
-		if (CHECK_FOR_DI_NEW_CONTROLLERS.load()) {
-			CHECK_FOR_DI_NEW_CONTROLLERS.wait(false);
-		}
-		CHECK_FOR_DI_NEW_CONTROLLERS = true;
-	}
-	return ERROR_SUCCESS;
-}
-
-void _cdecl ReleaseNotification() {
-	HCMNOTIFICATION hNotify = DI_CHECK_NOTIFICATION_HANDLE;
-	CM_Unregister_Notification(hNotify);
-}
-
-void __fastcall WindowsSystemInputDriver_BeginInput(WindowsSystemInputDriver* _this) {
-	if (FIRST_INIT) {
-		CM_NOTIFY_FILTER filter = {};
-		filter.cbSize = sizeof(CM_NOTIFY_FILTER);
-		filter.FilterType = CM_NOTIFY_FILTER_TYPE_DEVICEINTERFACE;
-		filter.u.DeviceInterface.ClassGuid = GUID_DEVINTERFACE_HID;
-
-		HCMNOTIFICATION hNotify = nullptr;
-		CONFIGRET cr = CM_Register_Notification(&filter, nullptr, DIDevicesChangedCallback, &hNotify);
-		DI_CHECK_NOTIFICATION_HANDLE = hNotify;
-		FIRST_INIT = false;
-		std::atexit(ReleaseNotification);
 	}
 
 	for (int i = 0; i < BC_BUTTONCODES; i++) {
-		_this->state[i].last = _this->state[i].now;
+		state[i].last = state[i].now;
 	}
 
-	if (_this->hasFocus) {
-		if (_this->m_pKeyboard->GetDeviceState(sizeof(_this->m_cKeyboardBuffer), _this->m_cKeyboardBuffer) < 0) {
-			_this->m_pKeyboard->Acquire();
+	if (hasFocus) {
+		if (m_pKeyboard->GetDeviceState(sizeof(m_cKeyboardBuffer), m_cKeyboardBuffer) < 0) {
+			m_pKeyboard->Acquire();
 			return;
 		}
 
 		unsigned char* dInputKeyCode = reinterpret_cast<unsigned char*>(0x0185efa8);
 		for (int i = 0; i < BC_BUTTONCODES - 1; i++) {
 			if (dInputKeyCode[i] != 0) {
-				_this->state[i].now = ((_this->m_cKeyboardBuffer[dInputKeyCode[i]] & 0x80) != 0);
+				state[i].now = ((m_cKeyboardBuffer[dInputKeyCode[i]] & 0x80) != 0);
 			}
 		}
 	}
 
-	if (_this->state[BC_LALT].now || _this->state[BC_RALT].now) {
-		_this->state[BC_ENTER].now = false;
-		_this->state[BC_NUM_ENTER].now = false;
+	if (state[BC_LALT].now || state[BC_RALT].now) {
+		state[BC_ENTER].now = false;
+		state[BC_NUM_ENTER].now = false;
 	}
 
 	std::uint32_t current = CMasterTimer_GetOSTime();
-	if (CHECK_FOR_DI_NEW_CONTROLLERS && (current - LAST_DI_CHECK_TIMESTAMP) >= 2000) {
-		auto oldControllerCount = _this->controllers;
-		_this->dInput->EnumDevices(DI8DEVCLASS_GAMECTRL, WindowsSystemInputDriver_EnumJoysticks, _this, DIEDFL_ATTACHEDONLY);
-		CHECK_FOR_DI_NEW_CONTROLLERS = false;
-		LAST_DI_CHECK_TIMESTAMP = CMasterTimer_GetOSTime();
-		if (_this->controllers > oldControllerCount) {
-			auto newestController = _this->controller[_this->controllers - 1];
-			_this->controller[_this->controllers - 1] = _this->controller[0];
-			_this->controller[0] = newestController;
-			logger::log_format("[WindowsSystemInputDriver::BeginInput] Device: {} bumped to slot 0!", newestController->DeviceName());
-		}
-	}
-	if (DEVICE_DROPPED) {
-		OnDirectInputControllerRemoved(_this, DEVICE_PATH_DROPPED);
-		DEVICE_DROPPED = false;
-	}
-	if ((current - LAST_XI_CHECK_TIMESTAMP) >= 2000) {
-		// Here, we try to figure out which XUsers the game is currently aware of.
-		std::array<bool, 4> connectedXUsers = { false, false, false, false };
-		for (int i = 0; i < 11; i++) {
-			if (_this->controller[i] != nullptr) {
-				if (std::string_view(_this->controller[i]->Identify()) == "XInput") {
-					std::uint32_t id = *reinterpret_cast<std::uint32_t*>(reinterpret_cast<std::uintptr_t>(_this->controller[i]) + 0x26C);
-					if (id < 4) {
-						connectedXUsers[id] = true;
+
+	SDL_UpdateGamepads();
+
+	// Periodic check for Controller Drops & Connections (~Every 2 Seconds)
+	if ((current - LAST_CONTROLLER_CHECK_TIMESTAMP) >= 2000) {
+
+		// Identify disconnected controllers & log them (keep slot alive for reconnect)
+		for (int i = 0; i < MAX_CONTROLLERS; i++) {
+			if (controller[i] != nullptr) {
+				if (std::string_view(controller[i]->Identify()) == "SDL3 Controller") {
+					SDL3ControllerDriver* sdl = reinterpret_cast<SDL3ControllerDriver*>(controller[i]);
+					if (!sdl->Connected() && !sdl->m_loggedDisconnect) {
+						sdl->m_loggedDisconnect = true;
+						logger::log_format("[WindowsSystemInputDriver::BeginInput] SDL Controller Disconnected! (Index: {})", i);
+
+						if (IsControllerLocked(i)) {
+							ShowControllerPullPacket packet = { .popupMessage = "Popup_Title_Attention^Reconnect_Controller_fmt", .playerIndex = GetPlayerIndex(sdl), .type = 1};
+							(*g_MessageDispatcher)->SendMessageToAll("ShowControllerPullMessage", &packet, 0);
+						}
 					}
 				}
 			}
 		}
-		// Next, we check to see if any XUsers dropped in the last two seconds.
-		for (int i = 0; i < 4; i++) {
-			if (connectedXUsers[i]) {
-				XINPUT_CAPABILITIES_EX caps{};
-				if (XInputGetCapabilitiesEx(1, i, XINPUT_FLAG_GAMEPAD, &caps) != ERROR_SUCCESS) {
-					OnXInputControllerRemoved(_this, i);
+
+		// Identify & attach newly connected controllers
+		int gamepadCount = 0;
+		SDL_JoystickID* joysticks = SDL_GetGamepads(&gamepadCount);
+		if (joysticks) {
+			for (int i = 0; i < gamepadCount; i++) {
+				if (!IsSDLGamepadAlreadyMapped(this, joysticks[i])) {
+					SDL_Gamepad* newGamepad = SDL_OpenGamepad(joysticks[i]);
+					if (!newGamepad) continue;
+
+					// Fill previously disconnected slots rather than making new ones.
+					int targetSlot = -1;
+					for (int s = 0; s < MAX_CONTROLLERS; s++) {
+						if (controller[s] != nullptr && std::string_view(controller[s]->Identify()) == "SDL3 Controller") {
+							SDL3ControllerDriver* sdl = reinterpret_cast<SDL3ControllerDriver*>(controller[s]);
+							if (!sdl->Connected()) {
+								targetSlot = s;
+								break;
+							}
+						}
+					}
+
+					if (targetSlot != -1) {
+						SDL3ControllerDriver* sdl = reinterpret_cast<SDL3ControllerDriver*>(controller[targetSlot]);
+						sdl->Reconnect(newGamepad);
+						SDL_UpdateGamepads();
+
+						logger::log_format("[WindowsSystemInputDriver::BeginInput] SDL Controller Reconnected! Restored to index: {}", targetSlot);
+						if (FrontEnd_InFrontend(*g_FrontEnd) && IsControllerLocked(targetSlot)) {
+							logger::log_format("[WindowsSystemInputDriver::BeginInput] Player Index: {}", GetPlayerIndex(sdl));
+							ShowControllerPullPacket showPacket = { .popupMessage = "Popup_Title_Attention^Reconnect_Controller_fmt", .playerIndex = GetPlayerIndex(sdl), .type = 2 };
+							(*g_MessageDispatcher)->SendMessageToAll("ShowControllerPullMessage", &showPacket, 0);
+						}
+						else if (IsControllerLocked(targetSlot)) {
+							logger::log_format("[WindowsSystemInputDriver::BeginInput] Player Index: {}", GetPlayerIndex(sdl));
+							HideControllerPullPacket hidePacket = { .playerIndex = GetPlayerIndex(sdl) };
+							(*g_MessageDispatcher)->SendMessageToAll("HideControllerPullMessage", &hidePacket, 0);
+						}
+					}
+					else {
+						if (auto slot = FindFirstAvailableControllerSlot(); slot.has_value()) {
+							controller[slot.value()] = new SDL3ControllerDriver(newGamepad);
+							controllers++;
+							logger::log_format("[WindowsSystemInputDriver::BeginInput] SDL Controller Connected! Mapped to index: {}", slot.value());
+						}
+						else {
+							logger::log_format("[WindowsSystemInputDriver::BeginInput] No open controller slots for new SDL Controller! Skipping...");
+							SDL_CloseGamepad(newGamepad);
+							break;
+						}
+					}
 				}
 			}
+			SDL_free(joysticks);
 		}
-		// Then, we check to see if there's any new XUsers that the game hasn't picked up yet.
-		for (int i = 0; i < 4; i++) {
-			if (!connectedXUsers[i]) {
-				// If we manage to find one, we add it!
-				XINPUT_CAPABILITIES_EX caps{};
-				if (XInputGetCapabilitiesEx(1, i, XINPUT_FLAG_GAMEPAD, &caps) == ERROR_SUCCESS) {
-					AddXInputController(_this, i);
-				}
-			}
-		}
-		LAST_XI_CHECK_TIMESTAMP = CMasterTimer_GetOSTime();
+
+		LAST_CONTROLLER_CHECK_TIMESTAMP = CMasterTimer_GetOSTime();
 	}
-	
+
 	for (int i = 0; i < 11; i++) {
-		if (_this->controller[i] != nullptr) {
-			_this->controller[i]->BeginInput();
+		if (controller[i] != nullptr) {
+			controller[i]->BeginInput();
 		}
 	}
 
-	if (_this->m_pMouse != nullptr) {
+	if (m_pMouse != nullptr) {
 		DIMOUSESTATE2 dims2{};
-		if (_this->m_pMouse->GetDeviceState(sizeof(DIMOUSESTATE2), &dims2) < 0) {
-			_this->m_pMouse->Acquire();
+		if (m_pMouse->GetDeviceState(sizeof(DIMOUSESTATE2), &dims2) < 0) {
+			m_pMouse->Acquire();
 		}
 		else {
-			_this->mouseX = dims2.lX;
-			_this->mouseY = dims2.lY;
-			if (abs(_this->mouseX) * 3 < abs(_this->mouseY)) {
-				_this->mouseX = 0;
+			mouseX = dims2.lX;
+			mouseY = dims2.lY;
+			if (abs(mouseX) * 3 < abs(mouseY)) {
+				mouseX = 0;
 			}
-			else if (abs(_this->mouseY) * 3 < abs(_this->mouseX)) {
-				_this->mouseY = 0;
+			else if (abs(mouseY) * 3 < abs(mouseX)) {
+				mouseY = 0;
 			}
 
 			if (GetSystemMetrics(SM_SWAPBUTTON) != 0) {
-				_this->state[BC_MOUSELEFT].now = (dims2.rgbButtons[1] & 0x80) != 0;
-				_this->state[BC_MOUSERIGHT].now = (dims2.rgbButtons[0] & 0x80) != 0;
+				state[BC_MOUSELEFT].now = (dims2.rgbButtons[1] & 0x80) != 0;
+				state[BC_MOUSERIGHT].now = (dims2.rgbButtons[0] & 0x80) != 0;
 			}
 			else {
-				_this->state[BC_MOUSELEFT].now = (dims2.rgbButtons[0] & 0x80) != 0;
-				_this->state[BC_MOUSERIGHT].now = (dims2.rgbButtons[1] & 0x80) != 0;
+				state[BC_MOUSELEFT].now = (dims2.rgbButtons[0] & 0x80) != 0;
+				state[BC_MOUSERIGHT].now = (dims2.rgbButtons[1] & 0x80) != 0;
 			}
-			_this->state[BC_MOUSEMIDDLE].now = (dims2.rgbButtons[2] & 0x80) != 0;
+			state[BC_MOUSEMIDDLE].now = (dims2.rgbButtons[2] & 0x80) != 0;
 		}
 	}
 }
 
 bool WindowsSystemInputDriver::Initialize(HINSTANCE hInst, HWND hWnd) {
 	this->hWnd = hWnd;
-	for (unsigned long i = 0; i < XUSER_MAX_COUNT; ++i) {
-		XINPUT_CAPABILITIES_EX capabilities{};
-		if (XInputGetCapabilitiesEx(1, i, XINPUT_FLAG_GAMEPAD, &capabilities) == ERROR_SUCCESS) {
-			this->controller[this->controllers] = new XInputInputDriver(i);
-			logger::log_format("[WindowsSystemInputDriver::Initialize] Device {}_{} mapped to index {}!", this->controller[this->controllers]->DeviceName(), i, this->controllers);
-			this->controllers++;
-		}
+
+	SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI_GAMECUBE, "1");
+	SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI_WII, "1");
+	SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI_SWITCH2, "1");
+	if (SDL_Init(SDL_INIT_GAMEPAD) < 0) {
+		logger::log_format("[WindowsSystemInputDriver::Initialize] SDL_Init Failed: {}", SDL_GetError());
+		return false;
 	}
-	if (DirectInput8Create(hInst, DIRECTINPUT_VERSION, IID_IDirectInput8A, reinterpret_cast<void**>(&this->dInput), NULL) == DI_OK) {
-		this->dInput->EnumDevices(DI8DEVCLASS_GAMECTRL, WindowsSystemInputDriver_EnumJoysticks, this, DIEDFL_ATTACHEDONLY);
-	}
-	for (auto i = 0; i < controllers; i++) {
-		if (this->controller[i]->m_iApplicationControllerID >= 0 && this->controller[i]->m_iApplicationControllerID != i) {
-			if (this->controller[this->controller[i]->m_iApplicationControllerID] != nullptr) {
-				logger::log_format("[WindowsSystemInputDriver::Initialize] Device {} cannot be remapped to empty slot {}!", i, this->controller[i]->m_iApplicationControllerID);
-			}
-			else {
-				logger::log_format("[WindowsSystemInputDriver::Initialize] Device {} re-mapped to slot {}!", i, this->controller[i]->m_iApplicationControllerID);
-				ControllerInputDriver* pTempController = this->controller[this->controller[i]->m_iApplicationControllerID];
-				this->controller[this->controller[i]->m_iApplicationControllerID] = this->controller[i];
-				this->controller[i] = pTempController;
+
+	// Populate initial gamepads via SDL
+	int gamepadCount = 0;
+	SDL_JoystickID* joysticks = SDL_GetGamepads(&gamepadCount);
+	if (joysticks) {
+		for (int i = 0; i < gamepadCount && this->controllers < MAX_CONTROLLERS; ++i) {
+			SDL_Gamepad* gamepad = SDL_OpenGamepad(joysticks[i]);
+			if (gamepad) {
+				this->controller[this->controllers] = new SDL3ControllerDriver(gamepad);
+				logger::log_format("[WindowsSystemInputDriver::Initialize] SDL Controller: {} mapped to index: {}!", SDL_GetGamepadName(gamepad), this->controllers);
+				this->controllers++;
 			}
 		}
+		SDL_free(joysticks);
 	}
-	if (this->controllers < 11 && this->controller[this->controllers] == nullptr) {
+
+	if (_DirectInput8Create(hInst, DIRECTINPUT_VERSION, IID_IDirectInput8A, reinterpret_cast<void**>(&this->dInput), NULL) != DI_OK) {
+		logger::log_format("[WindowsSystemInputDriver::Initialize] _DirectInput8Create Failed!");
+	}
+
+	if (this->controllers < MAX_CONTROLLERS && this->controller[this->controllers] == nullptr) {
 		char sMyDocumentsPath[260]{};
 		strcpy_s(sMyDocumentsPath, sizeof(sMyDocumentsPath), reinterpret_cast<const char*>(0x018d3138));
 		if (sMyDocumentsPath[0] == 0) {
@@ -426,25 +260,11 @@ bool WindowsSystemInputDriver::Initialize(HINSTANCE hInst, HWND hWnd) {
 		this->d_pKeyboard = this->controller[this->controllers];
 		this->controllers++;
 	}
-	/*
-	if (this->controllers < 11 && this->controller[this->controllers] == nullptr) {
-		logger::log_format("[WindowsSystemInputDriver::Initialize] Added virtual controller to slot: {}!", this->controllers);
-		this->controller[this->controllers] = new VirtualController();
-		this->controllers++;
-	}
-	*/
-	/*
-	if (this->controllers > 1) {
-		this->d_pKeyboard->SetSharedController(this->controller[0]);
-		for (auto i = 0; i < this->controllers - 1; i++) {
-			this->controller[i]->SetSharedController(this->d_pKeyboard);
-		}
-	}
-	*/
+
 	if (FAILED(this->dInput->CreateDevice(GUID_SysMouse, &this->m_pMouse, NULL))) {
 		return false;
 	}
-	if (FAILED(this->m_pMouse->SetDataFormat(&c_dfDIMouse2))) {
+	if (FAILED(this->m_pMouse->SetDataFormat(_c_dfDIMouse2))) {
 		return false;
 	}
 	this->m_pMouse->SetCooperativeLevel(hWnd, DISCL_NONEXCLUSIVE | DISCL_FOREGROUND);
@@ -452,12 +272,16 @@ bool WindowsSystemInputDriver::Initialize(HINSTANCE hInst, HWND hWnd) {
 	if (FAILED(this->dInput->CreateDevice(GUID_SysKeyboard, &this->m_pKeyboard, NULL))) {
 		return false;
 	}
-	if (FAILED(this->m_pKeyboard->SetDataFormat(&c_dfDIKeyboard))) {
+	if (FAILED(this->m_pKeyboard->SetDataFormat(_c_dfDIKeyboard))) {
 		return false;
 	}
 	this->m_pKeyboard->SetCooperativeLevel(hWnd, DISCL_NONEXCLUSIVE | DISCL_FOREGROUND | DISCL_NOWINKEY);
 	this->m_pKeyboard->Acquire();
 	return true;
+}
+
+void __fastcall WindowsSystemInputDriver_BeginInput(WindowsSystemInputDriver* _this) {
+	_this->BeginInputHook();
 }
 
 bool __fastcall WindowsSystemInputDriver_Initialize(WindowsSystemInputDriver* _this, std::uintptr_t edx, HINSTANCE hInst, HWND hWnd) {

@@ -4,39 +4,16 @@
 #include <cstdint>
 #include <string>
 #include <d3d9.h>
+#include "../Game/MiscOffsets.hpp"
 #include "../Game/GameSpecificFlashImpl.hpp"
-#include "../Game/Scaleform/Value.hpp"
+#include "../Game/Scaleform/GFxValue.hpp"
 #include "../Game/Genie/String.hpp"
 #include "../config.hpp"
 #include "OptionFlashCallbacks.hpp"
 
-inline auto ErrorPopup_MarkForClose = (void* (__thiscall*)(std::uintptr_t*))(0x00e9f8d0);
-inline auto Flash_Movie_CallFlashFunction = (void(__cdecl*)(std::uintptr_t, const char*, ...))(0x01168690);
-
-inline std::uintptr_t** g_ErrorPopup = reinterpret_cast<std::uintptr_t**>(0x0192b8b0);
-
 inline bool windowed_mode() {
 	return *reinterpret_cast<bool*>(*reinterpret_cast<std::uintptr_t*>(0x019062c8) + 0x4E);
 }
-
-struct Resolution {
-	unsigned int width;
-	unsigned int height;
-	static Resolution current() {
-		bool windowed = *reinterpret_cast<bool*>(*reinterpret_cast<std::uintptr_t*>(0x019062c8) + 0x4E);
-		D3DPRESENT_PARAMETERS* swap_chain_desc = windowed ? reinterpret_cast<D3DPRESENT_PARAMETERS*>(*reinterpret_cast<std::uintptr_t*>(0x019062c8) + 0x80) : reinterpret_cast<D3DPRESENT_PARAMETERS*>(*reinterpret_cast<std::uintptr_t*>(0x019062c8) + 0xB8);
-		return Resolution{ swap_chain_desc->BackBufferWidth, swap_chain_desc->BackBufferHeight };
-	}
-	static Resolution configured() {
-		return Resolution { static_cast<std::uint32_t>(GLOBAL_CONFIG->window_width), static_cast<std::uint32_t>(GLOBAL_CONFIG->window_height) };
-	}
-	bool operator==(const Resolution& other) {
-		if (width == other.width && height == other.height) {
-			return true;
-		}
-		return false;
-	}
-};
 
 static std::vector<Resolution> VALID_TARGETS{};
 static bool VALID_TARGETS_FOUND = false;
@@ -71,10 +48,10 @@ void HandleGetAllResolutions(void* movie) {
 			return_string += ",";
 		}
 	}
-	// Pass the list to the game through a Scaleform::Gfx::Value.
-	Scaleform::GFx::Value data(return_string.data());
+	// Pass the list to the game through a Value.
+	GFxValue data(return_string.data());
 	auto* inst = reinterpret_cast<std::uintptr_t*>(movie);
-	auto func = *reinterpret_cast<std::uint32_t(__thiscall**)(void*, Scaleform::GFx::Value*)>(*inst + 200);
+	auto func = *reinterpret_cast<std::uint32_t(__thiscall**)(void*, GFxValue*)>(*inst + 200);
 	// Set the return value for the Flash function.
 	func(inst, &data);
 	return;
@@ -85,10 +62,10 @@ void HandleGetCurrResolution(void* movie) {
 	Resolution configured{ static_cast<std::uint32_t>(GLOBAL_CONFIG->window_width), static_cast<std::uint32_t>(GLOBAL_CONFIG->window_height) };
 	int index = std::find(VALID_TARGETS.begin(), VALID_TARGETS.end(), configured) - VALID_TARGETS.begin();
 
-	// Pass the resolution index to the game through a Scaleform::Gfx::Value.
-	Scaleform::GFx::Value data(static_cast<float>(index));
+	// Pass the resolution index to the game through a Value.
+	GFxValue data(static_cast<float>(index));
 	auto* inst = reinterpret_cast<std::uintptr_t*>(movie);
-	auto func = *reinterpret_cast<std::uint32_t(__thiscall**)(void*, Scaleform::GFx::Value*)>(*inst + 200);
+	auto func = *reinterpret_cast<std::uint32_t(__thiscall**)(void*, GFxValue*)>(*inst + 200);
 	// Set the return value for the Flash function.
 	func(inst, &data);
 	return;
@@ -102,24 +79,51 @@ void HandleSetCurrResolution(void* movie, float index) {
 }
 
 void HandleGetCurrGraphicType(void* movie) {
-	// Pass the 'graphic type index' (really if vsync is enabled) to the game through a Scaleform::Gfx::Value.
-	Scaleform::GFx::Value data(static_cast<float>(GLOBAL_CONFIG->vsync ? 1 : 0));
+	// Pass the 'graphic type index' (really our shadow quality) to the game through a Value.
+	GFxValue data(static_cast<float>(std::to_underlying(GLOBAL_CONFIG->shadow_quality)));
 	auto* inst = reinterpret_cast<std::uintptr_t*>(movie);
-	auto func = *reinterpret_cast<std::uint32_t(__thiscall**)(void*, Scaleform::GFx::Value*)>(*inst + 200);
+	auto func = *reinterpret_cast<std::uint32_t(__thiscall**)(void*, GFxValue*)>(*inst + 200);
 	// Set the return value for the Flash function.
 	func(inst, &data);
 }
 
-void HandleSetCurrGraphicType(void* movie, float vsync) {
+void HandleSetCurrGraphicType(void* movie, float index) {
+	GLOBAL_CONFIG->shadow_quality = static_cast<ShadowQuality>(index);
+}
+
+void HandleGetCurrLayoutType(void* movie) {
+	// Pass the 'layout type index' (really if vsync is enabled) to the game through a Value.
+	GFxValue data(static_cast<float>(GLOBAL_CONFIG->vsync ? 1 : 0));
+	auto* inst = reinterpret_cast<std::uintptr_t*>(movie);
+	auto func = *reinterpret_cast<std::uint32_t(__thiscall**)(void*, GFxValue*)>(*inst + 200);
+	// Set the return value for the Flash function.
+	func(inst, &data);
+}
+
+void HandleSetCurrLayoutType(void* movie, float vsync) {
 	GLOBAL_CONFIG->vsync = vsync != 0.0f;
 	GLOBAL_CONFIG->finalize();
 }
 
-void HandleGetMenuOptionsList(void* movie) {
-	// Pass the string to the game through a Scaleform::Gfx::Value.
-	Scaleform::GFx::Value data("SharedText_OK");
+void HandleGetMotionBlurEnabled(void* movie) {
+	// Pass the motion blur setting index (which is just if it's enabled or not) to the game through a Value.
+	GFxValue data(static_cast<float>(GLOBAL_CONFIG->motion_blur ? 1 : 0));
 	auto* inst = reinterpret_cast<std::uintptr_t*>(movie);
-	auto func = *reinterpret_cast<std::uint32_t(__thiscall**)(void*, Scaleform::GFx::Value*)>(*inst + 200);
+	auto func = *reinterpret_cast<std::uint32_t(__thiscall**)(void*, GFxValue*)>(*inst + 200);
+	// Set the return value for the Flash function.
+	func(inst, &data);
+}
+
+void HandleSetMotionBlurEnabled(void* movie, float motion_blur) {
+	GLOBAL_CONFIG->motion_blur = motion_blur != 0.0f;
+	GLOBAL_CONFIG->finalize();
+}
+
+void HandleGetMenuOptionsList(void* movie) {
+	// Pass the string to the game through a Value.
+	GFxValue data("SharedText_OK");
+	auto* inst = reinterpret_cast<std::uintptr_t*>(movie);
+	auto func = *reinterpret_cast<std::uint32_t(__thiscall**)(void*, GFxValue*)>(*inst + 200);
 	// Set the return value for the Flash function.
 	func(inst, &data);
 }

@@ -1,4 +1,7 @@
 #pragma once
+#include "../Input/SystemInputDriver.hpp"
+#include "../Genie/String.hpp"
+
 #include "CActorComponent.hpp"
 
 inline auto CarsVehicle_BumpBashHandle = (void(_cdecl*)(CActor*, CActor*, bool))(0x006be990);
@@ -7,11 +10,19 @@ inline auto CarsVehicle_GoInTheZone = (bool(__thiscall*)(class CarsVehicle*, boo
 inline auto CarsVehicle_SetPowerTrainOverride = (void(__thiscall*)(class CarsVehicle*, bool, float, float, float, bool, bool))(0x006c35e0);
 inline auto CarEnergy_AddEnergy = (void(__thiscall*)(class CarEnergy*, float, bool, bool, int, const char*, int, bool))(0x00690590);
 inline auto CarsControlMapper_SetVibrationDuration = (void(__thiscall*)(class CarsControlMapper*, std::uint32_t, std::uint32_t, int))(0x006646f0);
+inline auto CarsControlMapper_SwitchControlScheme = (void(__thiscall*)(class CarsControlMapper*, const Genie::String*))(0x00661230);
 
-class CarsControlMapper {
+class CarsControlMapper : public CActorComponent {
+public:
+	int m_playerId;
+	ControllerInputDriver* m_driver;
+	bool m_controlEnabled;
 public:
 	inline void SetVibrationDuration(std::uint32_t duration_ms, std::uint32_t intensity, int pan = 0) {
 		CarsControlMapper_SetVibrationDuration(this, duration_ms, intensity, pan);
+	}
+	inline void SwitchControlScheme(const Genie::String& scheme) {
+		CarsControlMapper_SwitchControlScheme(this, &scheme);
 	}
 };
 
@@ -34,6 +45,9 @@ public:
 	}
 	inline CarEnergy& GetCarEnergy() {
 		return *reinterpret_cast<CarEnergy*>(reinterpret_cast<std::uintptr_t>(this) + 0x11F0);
+	}
+	inline bool IsAIControlled() {
+		return *reinterpret_cast<bool*>(reinterpret_cast<std::uintptr_t>(this) + 0x89C);
 	}
 	inline bool GetInTheZone() {
 		return *reinterpret_cast<int*>(reinterpret_cast<std::uintptr_t>(this) + 0xE4C) != 0;

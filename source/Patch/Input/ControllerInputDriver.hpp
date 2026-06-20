@@ -88,6 +88,7 @@ enum class UIControllerType : unsigned char {
 	Xbox360Controller = 0,
 	DualShock3,
 	WiiRemote,
+	WiiRemoteNunchuck,
 	WiiClassicController,
 	GameCubeController,
 };
@@ -95,15 +96,66 @@ enum class UIControllerType : unsigned char {
 inline std::string_view SuffixForCT(UIControllerType self) {
 	switch (self) {
 	case UIControllerType::Xbox360Controller:
-		return ""; // FIXME
+		return "";
 	case UIControllerType::DualShock3:
 		return "_ps3";
 	case UIControllerType::WiiRemote:
+		return "_wii";
+	case UIControllerType::WiiRemoteNunchuck: // WPAD_DEV_FREESTYLE, On Wii they just don't have a suffix for this.
 		return "_wii";
 	case UIControllerType::WiiClassicController:
 		return "_wcc";
 	case UIControllerType::GameCubeController:
 		return "_gcn";
+	}
+}
+
+inline std::string_view LoadTipSuffixForCT(UIControllerType self) {
+	switch (self) {
+	case UIControllerType::Xbox360Controller:
+		return "";
+	case UIControllerType::DualShock3:
+		return "_ps3";
+	case UIControllerType::WiiRemote: // WPAD_DEV_CORE, On Wii they just don't have a suffix for this.
+		return "_WiiRemote";
+	case UIControllerType::WiiRemoteNunchuck: 
+		return "_Nunchuk";
+	case UIControllerType::WiiClassicController:
+		return "_WiiClassic";
+	case UIControllerType::GameCubeController:
+		return "_Gamecube";
+	}
+}
+
+inline std::string_view ActionMapPlatformForCT(UIControllerType self) {
+	switch (self) {
+	case UIControllerType::Xbox360Controller:
+	case UIControllerType::DualShock3:
+		return "X360";
+	case UIControllerType::WiiRemote: // WPAD_DEV_CORE
+		return "Wii-wheel";
+	case UIControllerType::WiiRemoteNunchuck:
+		return "Wii-nunchuk";
+	case UIControllerType::WiiClassicController:
+		return "Wii-classic";
+	case UIControllerType::GameCubeController:
+		return "Wii-gamecube";
+	}
+}
+
+inline std::string_view XMLNameForCT(UIControllerType self) {
+	switch (self) {
+	case UIControllerType::Xbox360Controller:
+	case UIControllerType::DualShock3:
+		return "Controls_ButtonAction.xml";
+	case UIControllerType::WiiRemote: // WPAD_DEV_CORE
+		return "Controls_wiibasic.xml";
+	case UIControllerType::WiiRemoteNunchuck:
+		return "Controls_wiinunchuk.xml";
+	case UIControllerType::WiiClassicController:
+		return "Controls_ButtonAction.xml"; // "Controls_wiiclassic.xml";
+	case UIControllerType::GameCubeController:
+		return "Controls_wiiGameCube.xml";
 	}
 }
 
@@ -118,44 +170,6 @@ struct AxisPair {
 	float deadZonePercent;
 	float clampZonePercent;
 };
-
-struct ControllerPacket {
-	bool leftLast : 1;
-	bool leftNow : 1;
-	bool downLast : 1;
-	bool downNow : 1;
-	bool rightLast : 1;
-	bool rightNow : 1;
-	bool upLast : 1;
-	bool upNow : 1;
-	bool squareLast : 1;
-	bool squareNow : 1;
-	bool crossLast : 1;
-	bool crossNow : 1;
-	bool circleLast : 1;
-	bool circleNow : 1;
-	bool triangleLast : 1;
-	bool triangleNow : 1;
-	bool l1Last : 1;
-	bool l1Now : 1;
-	bool r1Last : 1;
-	bool r1Now : 1;
-	bool l2Last : 1;
-	bool l2Now : 1;
-	bool r2Last : 1;
-	bool r2Now : 1;
-	bool startLast : 1;
-	bool startNow : 1;
-	bool selectLast : 1;
-	bool selectNow : 1;
-	bool l3Last : 1;
-	bool l3Now : 1;
-	bool r3Last : 1;
-	bool r3Now : 1;
-	unsigned short axis[6];
-};
-
-static_assert(sizeof(ControllerPacket) == 16);
 
 class ControllerInputDriver {
 public:
@@ -217,7 +231,6 @@ public:
 	virtual void SetSecondaryController(ControllerInputDriver* controller);
 	virtual bool AnyButtonPressed() = 0;
 	virtual const char* Identify() = 0;
-	virtual ControllerPacket SerializePacket();
 public:
 	inline void SetSharedController(ControllerInputDriver* sharedController) {
 		m_pSharedController = sharedController;

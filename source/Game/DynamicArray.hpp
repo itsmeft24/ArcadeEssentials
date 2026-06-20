@@ -1,22 +1,25 @@
 #pragma once
-#include "Types.hpp"
 
-class DynamicArrayBase {
-protected:
-	void* m_Items;
-	u32 m_Count;
-	u32	m_Total;
-	u32	m_Zero : 1;
-	u32	m_Locked : 1;
-	u32	m_Aligned : 1;
-	u32	m_GrowBy : 21;
-	u32	m_Heap : 8;
-	char m_Unk[0xC];
+template <typename T> class DynamicArray {
 public:
+	T* m_Items;
+	unsigned int m_Count;
+	unsigned int m_Total;
+	unsigned int m_Grow;
+	bool m_Zero;
+	bool m_Locked;
+	unsigned int m_Align;
+	void* m_Heap;
+public:
+	inline T& operator[](unsigned int index) {
+		return m_Items[index];
+	}
+	inline const T& operator[](unsigned int index) const {
+		return m_Items[index];
+	}
+	inline unsigned int Count() const {
+		return m_Count;
+	}
 };
 
-template <typename T> class DynamicArray : DynamicArrayBase {
-};
-
-static_assert(sizeof(DynamicArrayBase) == 0x1C);
 static_assert(sizeof(DynamicArray<void*>) == 0x1C);

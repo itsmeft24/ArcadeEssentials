@@ -152,7 +152,7 @@ public:
 	virtual ControllerInputDriver* GetFirstUnlockedController();
 	virtual unsigned int GetNumLockedControllers();
 	virtual int GetFirstUnlockedPlayer();
-	virtual int GetPlayerIndex(unsigned int controllerNum);
+	virtual int GetPlayerIndex(ControllerInputDriver* controller);
 };
 
 static_assert(sizeof(SystemInputDriver) == 224);

@@ -1,6 +1,8 @@
 #include <iostream>
 #include <fstream>
+#include <array>
 #include <filesystem>
+#include <unordered_map>
 #include <Windows.h>
 #include <shlwapi.h>
 #include <sunset.hpp>
@@ -8,104 +10,42 @@
 #include <dwmapi.h>
 #include "pentane.hpp"
 #include "config.hpp"
+#include "Game/MiscOffsets.hpp"
 #include "Game/GameSpecificFlashImpl.hpp"
 #include "Game/Genie/String.hpp"
 #include "Game/GameProgressionManager.hpp"
 #include "Game/Stage/StageEntity.hpp"
 #include "Game/Components/ActiveMoves.hpp"
 #include "Game/Components/CarsReactionMonitor.hpp"
+#include "Game/Components/CarsWeaponInventory.hpp"
 #include "Game/Stage/Cars2VehicleDBlock.hpp"
+#include "Patch/Debug/CMessageLogging.hpp"
 #include "Patch/Input/KeyControllerInputDriver.hpp"
 #include "Patch/Input/WindowsSystemInputDriver.hpp"
-#include "Patch/Input/WindowsControllerInputDriver.hpp"
-#include "Patch/Input/XInputInputDriver.hpp"
+// #include "Patch/Input/WindowsControllerInputDriver.hpp"
+// #include "Patch/Input/XInputInputDriver.hpp"
+#include "Patch/MultiPlayer.hpp"
 #include "Patch/OptionFlashCallbacks.hpp"
+#include "Patch/FMV/Driver.hpp"
+#include "Game/Renderer/DataTypes.hpp"
+#include "Game/FrontEnd/CarsFrontEnd.hpp"
+#include "Game/Avatar.hpp"
+#include "Game/GamePlay/Race/RaceManager.hpp"
+#include "Game/Scaleform/Wrapper/Movie.hpp"
+#include "Game/Scaleform/Wrapper/FlashControlMapper.hpp"
+#include "Game/FMV/Driver.hpp"
+#include "Game/FMV/Player.hpp"
+#include "Game/FMV/Subtitles.hpp"
+#include "Game/AudioEventManager.hpp"
+#include "Axel/Axel.hpp"
+#include "Game/Hud/CarsHud.hpp"
 
-inline auto FUN_00ef3a30 = (void(__thiscall*)(std::uintptr_t))(0x00ef3a30);
-inline auto FUN_0060e7d0 = (void(__thiscall*)(std::uintptr_t, int, int))(0x0060e7d0);
-inline auto FUN_0060ee20 = (void**(__thiscall*)(std::uintptr_t, void*, int))(0x0060ee20);
-inline auto FUN_00613000 = (void*(__thiscall*)(std::uintptr_t, void*))(0x00613000);
-inline auto _CarsFrontEnd_SetScreen = (void(__thiscall*)(void*, int, const char*, bool))(0x004c1440);
-inline auto _CarsFrontEnd_SetLevelAndUnk = (void(__thiscall*)(void*, void*))(0x004c0780);
-inline auto _CarsFrontEnd_UnkHandleTrackLengthType = (void(__thiscall*)(void*, char*))(0x004c0800);
-inline auto _CarsFrontEnd_SetGameModeIndex = (void(__thiscall*)(void*, char*))(0x004c2dc0);
-inline auto _CarsFrontEnd_UNK_004c3b70 = (void(__thiscall*)(void*))(0x004c3b70);
-inline auto Flash_Movie_CallFlashFunction = (void(__cdecl*)(std::uintptr_t, const char*, ...))(0x01168690);
-inline auto Flash_EngineTextureLoader_LoadTextureSet = (void* (__thiscall*)(void*, const char*, bool, int))(0x0116cd20);
-inline auto CTranslator_Translate = (char*(__thiscall*)(void*, void*, bool))(0x00cf6dd0);
-inline auto UnkExcelDataBase_GetUnk = (void(__thiscall*)(void*, void*, void*))(0x0052cd70);
-inline auto UnkExcelDataBase_GetUnk1 = (void(__thiscall*)(void*, void*, void*))(0x0052ce80);
-inline auto UnkExcelDataBase_GetUnk2 = (void(__thiscall*)(void*, void*, void*, float*, float*))(0x0052cfe0);
-inline auto UnkExcelDataBase_GetUnk3 = (void(__thiscall*)(void*, std::uint32_t, void*, void*))(0x0052af10);
-inline auto PersistentData_GetGlobal = (int(__thiscall*)(void*, const char*))(0x00cf0e20);
-inline auto PersistentData_SetGlobal = (void(__thiscall*)(void*, const char*, std::uint32_t))(0x00cf0e40);
-inline auto PersistentData_IsSetGlobal = (bool(__thiscall*)(void*, const char*))(0x00cf0e70);
-inline auto FUN_00f675d0 = (std::uint32_t(__thiscall*)(void*, const char*, std::uint32_t))(0x00f675d0);
-inline auto FUN_00f66d60 = (std::uint32_t(__thiscall*)(void*, std::uint32_t))(0x00f66d60);
-inline auto GameCommon_SetPlayerSfxVolume = (void(__thiscall*)(void*, float, char))(0x00eb48b0);
-inline auto GameCommon_SetPlayerMusicVolume = (void(__thiscall*)(void*, float, char))(0x00eb49a0);
-inline auto GameCommon_SetPlayerDialogueVolume = (void(__thiscall*)(void*, float, char))(0x00eb4a90);
-inline auto FUN_0116d4d0 = (void(__thiscall*)(std::uintptr_t, std::uintptr_t, const char*))(0x0116d4d0);
-inline auto CSaveGame_UNK_00ee99a0 = (void(__thiscall*)(std::uintptr_t, bool))(0x00ee99a0);
-inline auto CSaveGame_UNK_00eea2e0 = (void(__thiscall*)(std::uintptr_t))(0x00eea2e0);
-inline auto CSaveGame_ClearLoadedData = (void(__thiscall*)(std::uintptr_t))(0x00ee9ae0);
-inline auto FUN_00ba0870 = (void(__thiscall*)(std::uintptr_t, std::uintptr_t))(0x00ba0870);
-inline auto FUN_0080df70 = (void(__thiscall*)(std::uintptr_t))(0x0080df70);
-inline auto CMasterTimer_GetOSTime = (std::uint32_t(_cdecl*)())(0x00770280);
-inline auto operator_new = (void*(_cdecl*)(std::size_t))(0x007b1650);
-inline auto HudPosition_Multi_HudPosition_Multi = (void*(__thiscall*)(void*, std::uint32_t, std::uint32_t))(0x0054b220);
-inline auto FUN_004d0250 = (void(__thiscall*)(std::uintptr_t, int))(0x004d0250);
-inline auto _Flash_Gui_AddMovie = (void*(__thiscall*)(std::uintptr_t, const char*, char, float, float))(0x01165de0);
-inline auto _Flash_Movie_SetLoadMovie = (void(__thiscall*)(void*, const char*, float, float))(0x011676e0);
+#ifdef MP_STRATEGY_AXEL
+#pragma comment(lib, "steam_api.lib")
+#pragma comment(lib, "sdkencryptedappticket.lib")
+#endif
 
-inline std::uintptr_t* g_PopupCallback = reinterpret_cast<std::uintptr_t*>(0x01929b60);
-inline void** g_PersistentData = reinterpret_cast<void**>(0x01926ef8);
-inline void** g_Game = reinterpret_cast<void**>(0x01929bfc);
-inline std::uintptr_t* g_SaveGame = reinterpret_cast<std::uintptr_t*>(0x0192b8d0);
-inline std::uintptr_t* g_FlashGui = reinterpret_cast<std::uintptr_t*>(0x0192e0e4);
-
-#include "Patch/Private/Testing.inl"
-
-enum CarsFrontEndScreen {
-	Invalid = 0,
-	ExitToWindows = 1,
-	AutoSaveWarning = 2,
-	TitleMenu = 3,
-	UnkSubMenuGears = 4, // FIXME
-	SaveFileLoading = 5,
-	SaveSlots = 6,
-	MainMenu_Extras = 7,
-	Extras_Options = 8,
-	Extras_EnterCode = 9,
-	Extras_Cheats = 10,
-	Extras_Credits = 11,
-	MT_FrontEnd = 12,
-	MainMenu_StoryMissions = 13,
-	MissionSelect = 14,
-	MissionDetails = 15,
-	MainMenu_Badges = 16,
-	BadgeMenu_Badges = 17,
-	BadgeMenu_Crests = 18,
-	BadgeMenu_Suitcases = 19, // Unused in both PC and Arcade
-	MainMenu_CustomMissions = 20,
-	MT_Hunter = 21,
-	MainMenu_CustomMissions2 = 22,
-	MT_Hunter2 = 23,
-	MissionSettings_Unk = 24, // FIXME
-	CustomSquadSeries = 25,
-	MissionSettings_Unk2 = 26, // FIXME
-	GarageConnect = 27,
-	WorldOfCarsConnect = 28,
-	MainMenu_Garage = 29,
-	GarageDetails = 30,
-	WorldOfCars = 31, // Causes a game crash!
-	WaitingForChallengers = 32, // FIXME
-	UnkSubMenuGears2 = 33, // FIXME
-	UnkSubMenuGears3 = 34, // FIXME
-	CarSelect = 35,
-};
-
-void __fastcall InitClearanceLevelData(std::uintptr_t unk) {
+void __fastcall init_clearance_level_data(std::uintptr_t unk) {
 	auto iVar2 = FUN_00f675d0(*reinterpret_cast<void**>(0x0192c5ec), "Stat_SPY_POINTS", 1);
 	auto local_c = FUN_00f66d60(*reinterpret_cast<void**>(0x0192c5ec), iVar2);
 	iVar2 = FUN_00f675d0(*reinterpret_cast<void**>(0x0192c5ec), "Stat_CLEARANCE_LEVEL", 1);
@@ -149,8 +89,8 @@ DefineReplacementHook(CarsFrontEnd_SetScreen) {
 			logger::log_format("[CarsFrontEnd::SetScreen] {}, nullptr, {}", unk, unk2);
 		}
 #endif
-		std::int32_t menu_state = *(reinterpret_cast<std::int32_t*>(reinterpret_cast<std::uintptr_t>(_this) + 0xA8));
-		if (menu_state == SaveSlots) {
+		CarsFrontEndScreen menu_state = *(reinterpret_cast<CarsFrontEndScreen*>(reinterpret_cast<std::uintptr_t>(_this) + 0xA8));
+		if (menu_state == CarsFrontEndScreen::SaveSlots) {
 			std::uintptr_t* mini_menu = *(reinterpret_cast<std::uintptr_t**>(reinterpret_cast<std::uintptr_t>(_this) + 0xe4));
 			if (mini_menu != nullptr) {
 				if (*mini_menu != 0) {
@@ -159,36 +99,19 @@ DefineReplacementHook(CarsFrontEnd_SetScreen) {
 				}
 			}
 		}
-#ifdef MP_STRATEGY_ONLINE
-		if (unk == WaitingForChallengers) {
-			if ((*reinterpret_cast<std::uint32_t*>(0x018aa724) & NetFlags::Active) != 0) {
-				logger::log_format("[CarsFrontEnd::SetScreen] Net is enabled!");
-				if (!(*g_InputPtr)->ControllerLocked(0)) {
-					logger::log_format("[CarsFrontEnd::SetScreen] Locking player 0 to controller 0...");
-					(*g_InputPtr)->LockPlayerToController(0, 0);
-					*reinterpret_cast<int*>(reinterpret_cast<std::uintptr_t>(_this) + 0x7DC) = 0;
-				}
-				for (auto i = 0; i < 11; i++) {
-					if (std::string_view((*g_InputPtr)->controller[i]->Identify()) == "Virtual") {
-						logger::log_format("[CarsFrontEnd::SetScreen] Locking player 1 to controller {}...", i);
-						(*g_InputPtr)->LockPlayerToController(1, i);
-						break;
-					}
-				}
-				if (!(*g_InputPtr)->ControllerLocked(1)) {
-					logger::log_format("[CarsFrontEnd::SetScreen] Virtual controller was not locked!");
-				}
-			}
-		}
-#endif
 		original(_this, edx, unk, unk_name, unk2);
 	}
 };
 
 DefineReplacementHook(CarsFrontEnd_GoBack) {
-	static void __fastcall callback(void* _this) {
+	static void __fastcall callback(CarsFrontEnd* _this) {
 		auto value = *reinterpret_cast<int*>(*reinterpret_cast<std::uintptr_t*>(reinterpret_cast<std::uintptr_t>(_this) + 0x3FC) + 8);
+#ifdef _DEBUG
 		logger::log_format("[CarsFrontEnd::GoBack] Going back to {}...", value);
+#endif
+#ifdef MP_STRATEGY_AXEL
+		axel::ui::on_retract(_this);
+#endif
 		original(_this);
 	}
 };
@@ -204,7 +127,7 @@ DefineReplacementHook(RegisterMissingFlashFuncs) {
 	}
 };
 
-int GetNumUnlockedControllers() {
+int get_num_unlocked_controllers() {
 	int unlocked_controller_count = 0;
 	for (int i = 0; i < 11; i = i + 1) {
 		void* controller = (*g_InputPtr)->GetUnlockedController(i);
@@ -220,7 +143,7 @@ int GetNumUnlockedControllers() {
 }
 
 DefineReplacementHook(OnConfirmHook) {
-	static void __fastcall callback(void* _this, std::uintptr_t edx, char* _selected_menu, std::uintptr_t unk_menu) {
+	static void __fastcall callback(CarsFrontEnd* _this, std::uintptr_t edx, char* _selected_menu, std::uintptr_t unk_menu) {
 		std::string selected_menu = _selected_menu;
 		logger::log_format("[CarsFrontEnd::OnConfirm] {}", selected_menu);
 		*(reinterpret_cast<std::int32_t*>(reinterpret_cast<std::uintptr_t>(_this) + 0x7CC)) += 1;
@@ -230,33 +153,50 @@ DefineReplacementHook(OnConfirmHook) {
 		bool should_set_screen = false;
 		bool should_play_item_selected = true;
 
-		std::int32_t menu_state = *(reinterpret_cast<std::int32_t*>(reinterpret_cast<std::uintptr_t>(_this) + 0xA8));
-		switch (menu_state) {
-		case ExitToWindows:
+		CarsFrontEndScreen screen = *(reinterpret_cast<CarsFrontEndScreen*>(reinterpret_cast<std::uintptr_t>(_this) + 0xA8));
+		switch (screen) {
+		case CarsFrontEndScreen::ExitToTitleScreen:
 			*reinterpret_cast<std::uint8_t*>(g_PopupCallback + 0x131) = 1;
 			if (selected_menu == "SharedText_Yes") {
+				/*
+				if (((*g_PopupCallback) + 0xc8) == *reinterpret_cast<std::uintptr_t*>((*g_PopupCallback) + 0x4C)) {
+					StorageStateMachine_PopupCallback_FUN_00e9b3c0(*g_PopupCallback);
+					*reinterpret_cast<std::uintptr_t*>((*g_PopupCallback) + 0x48) = ((*g_PopupCallback) + 0x58);
+				}
+				_CarsFrontEnd_GoBack(_this);
+				*/
 				std::exit(0);
 			}
 			else {
-				_CarsFrontEnd_SetScreen(_this, MT_FrontEnd, nullptr, false);
+				// `CarsFrontEnd::SetScreen` destroys a few PersistentData keys when you re-enter `MT_FrontEnd`, so we back them up before we call it and restore them right after.
+				int savePlayersCreated = PersistentData_GetGlobal(*g_PersistentData, "PlayersCreated");
+				int savePlayerCount = PersistentData_GetGlobal(*g_PersistentData, "NumPlayers");
+				int saveMp = PersistentData_GetGlobal(*g_PersistentData, "MultiPlayer");
+				int saveScreenFormat = PersistentData_GetGlobal(*g_PersistentData, "ScreenFormat");
+
+				_CarsFrontEnd_SetScreen(_this, CarsFrontEndScreen::MT_FrontEnd, nullptr, false);
+
+				PersistentData_SetGlobal(*g_PersistentData, "PlayersCreated", savePlayersCreated);
+				PersistentData_SetGlobal(*g_PersistentData, "NumPlayers", savePlayerCount);
+				PersistentData_SetGlobal(*g_PersistentData, "MultiPlayer", saveMp);
+				PersistentData_SetGlobal(*g_PersistentData, "ScreenFormat", saveScreenFormat);
+
 				std::uint32_t array[2] = { 1, 0 };
 				FUN_00ba0870(reinterpret_cast<std::uintptr_t>(_this) + 0x3e8, reinterpret_cast<std::uintptr_t>(&array));
 			}
 			should_play_item_selected = false;
 			break;
-		case AutoSaveWarning:
-			_CarsFrontEnd_SetScreen(_this, TitleMenu, nullptr, true);
+		case CarsFrontEndScreen::AutoSaveWarning:
+			_CarsFrontEnd_SetScreen(_this, CarsFrontEndScreen::TitleMenu, nullptr, true);
 			should_play_item_selected = false;
 			break;
 
-		case TitleMenu:
+		case CarsFrontEndScreen::TitleMenu:
 			{
 			// For some god-forsaken reason, the game refuses to accept player 0 input from anything but controller 0. So we silently swap whoever pressed START at the title screen with controller 0.
 			int start_controller = *_selected_menu - 0x30;
 			if (start_controller != 0) {
-				ControllerInputDriver* old_controller_zero = (*g_InputPtr)->controller[0];
-				(*g_InputPtr)->controller[0] = (*g_InputPtr)->controller[start_controller];
-				(*g_InputPtr)->controller[start_controller] = old_controller_zero;
+				(*g_InputPtr)->SwapControllers(0, start_controller);
 				start_controller = 0;
 			}
 			// If theres no controller locked to player 0, we want to lock player 0 to whoever pressed START at the title screen (due to the above hack this should always be zero anyway).
@@ -270,12 +210,12 @@ DefineReplacementHook(OnConfirmHook) {
 			CSaveGame_ClearLoadedData(*g_SaveGame);
 			FUN_0080df70(*reinterpret_cast<std::uintptr_t*>(0x018d323c));
 			*reinterpret_cast<bool*>(*g_PopupCallback + 0x10C) = true;
-			_CarsFrontEnd_SetScreen(_this, SaveFileLoading, nullptr, true);
+			_CarsFrontEnd_SetScreen(_this, CarsFrontEndScreen::SaveFileLoading, nullptr, true);
 			*reinterpret_cast<std::uint8_t*>(reinterpret_cast<std::uintptr_t>(_this) + 0x424) = static_cast<std::uint8_t>(*reinterpret_cast<std::uint32_t*>(reinterpret_cast<std::uintptr_t>(*g_GameProgressionManager) + 0x108));
 			should_play_item_selected = false;
 			}
 			break;
-		case SaveSlots:
+		case CarsFrontEndScreen::SaveSlots:
 		{
 			int index = std::atoi(_selected_menu);
 			if (index < 0 || index > 2) {
@@ -296,54 +236,65 @@ DefineReplacementHook(OnConfirmHook) {
 			GameCommon_SetPlayerMusicVolume(*g_Game, *reinterpret_cast<float*>(unk + 4), 0);
 			GameCommon_SetPlayerSfxVolume(*g_Game, *reinterpret_cast<float*>(unk + 8), 0);
 			GameCommon_SetPlayerDialogueVolume(*g_Game, *reinterpret_cast<float*>(unk + 12), 0);
-			_CarsFrontEnd_SetScreen(_this, MT_FrontEnd, nullptr, true);
+			_CarsFrontEnd_SetScreen(_this, CarsFrontEndScreen::MT_FrontEnd, nullptr, true);
 			should_play_item_selected = false;
 		}
 		break;
 
-		case MainMenu_Extras:
+		case CarsFrontEndScreen::MainMenu_Extras:
 			if (selected_menu == "FE_EX_Options") {
-				_CarsFrontEnd_SetScreen(_this, Extras_Options, _selected_menu, true);
+				_CarsFrontEnd_SetScreen(_this, CarsFrontEndScreen::Extras_Options, _selected_menu, true);
 			}
 			else if (selected_menu == "FE_EX_EnterCode") {
-				_CarsFrontEnd_SetScreen(_this, Extras_EnterCode, _selected_menu, true);
+				_CarsFrontEnd_SetScreen(_this, CarsFrontEndScreen::Extras_EnterCode, _selected_menu, true);
 			}
 			else if (selected_menu == "FE_EX_Credits") {
-				_CarsFrontEnd_SetScreen(_this, Extras_Credits, nullptr, true);
+				_CarsFrontEnd_SetScreen(_this, CarsFrontEndScreen::Extras_Credits, nullptr, true);
 			}
 			else if (selected_menu == "FE_EX_Cheats") {
-				_CarsFrontEnd_SetScreen(_this, Extras_Cheats, nullptr, true);
+				_CarsFrontEnd_SetScreen(_this, CarsFrontEndScreen::Extras_Cheats, nullptr, true);
 			}
 			else if (selected_menu == "FE_EX_Graphics") {
-				_CarsFrontEnd_SetScreen(_this, Extras_Options, _selected_menu, true);
+				_CarsFrontEnd_SetScreen(_this, CarsFrontEndScreen::Extras_Options, _selected_menu, true);
 			}
 			break;
 
-		case MT_FrontEnd:
+		case CarsFrontEndScreen::MT_FrontEnd:
 			if (selected_menu == "FE_MM_Garage") {
-				_CarsFrontEnd_SetScreen(_this, MainMenu_Garage, _selected_menu, true);
+				_CarsFrontEnd_SetScreen(_this, CarsFrontEndScreen::MainMenu_Garage, _selected_menu, true);
 			}
 			else if (selected_menu == "FE_MM_StoryMissions") {
-				_CarsFrontEnd_SetScreen(_this, MainMenu_StoryMissions, _selected_menu, true);
+				_CarsFrontEnd_SetScreen(_this, CarsFrontEndScreen::MainMenu_StoryMissions, _selected_menu, true);
 			}
 			else if (selected_menu == "FE_MM_CustomMissions") {
-				_CarsFrontEnd_SetScreen(_this, MainMenu_CustomMissions, _selected_menu, true);
+				_CarsFrontEnd_SetScreen(_this, CarsFrontEndScreen::MainMenu_CustomMissions, _selected_menu, true);
 			}
 			else if (selected_menu == "FE_MM_Badges") {
-				_CarsFrontEnd_SetScreen(_this, MainMenu_Badges, _selected_menu, true);
+				_CarsFrontEnd_SetScreen(_this, CarsFrontEndScreen::MainMenu_Badges, _selected_menu, true);
 			}
 			else if (selected_menu == "FE_MM_Extras") {
-				_CarsFrontEnd_SetScreen(_this, MainMenu_Extras, _selected_menu, true);
+				_CarsFrontEnd_SetScreen(_this, CarsFrontEndScreen::MainMenu_Extras, _selected_menu, true);
 			}
 			else if (selected_menu == "FE_MM_WOC") {
-				_CarsFrontEnd_SetScreen(_this, WorldOfCars, _selected_menu, true);
+				_CarsFrontEnd_SetScreen(_this, CarsFrontEndScreen::WorldOfCars_Missions, _selected_menu, true);
 			}
+			/*
+			else if (selected_menu == "Win32Wii_Scn_ExitToWindows") {
+				FUN_004d0250(reinterpret_cast<std::uintptr_t>(_this), 2);
+				_CarsFrontEnd_SetScreen(_this, CarsFrontEndScreen::MT_FrontEnd, nullptr, false);
+			}
+			*/
+#ifdef MP_STRATEGY_AXEL
+			else if (selected_menu == "FE_MM_Axel") {
+				_CarsFrontEnd_SetScreen(_this, CarsFrontEndScreen::Axel_Online, _selected_menu, true);
+			}
+#endif
 			if (*reinterpret_cast<std::uintptr_t*>(reinterpret_cast<std::uintptr_t>(_this) + 0xE4) != 0) {
-				InitClearanceLevelData(*reinterpret_cast<std::uintptr_t*>(reinterpret_cast<std::uintptr_t>(_this) + 0xE4));
+				init_clearance_level_data(*reinterpret_cast<std::uintptr_t*>(reinterpret_cast<std::uintptr_t>(_this) + 0xE4));
 			}
 			break;
 
-		case MainMenu_StoryMissions:
+		case CarsFrontEndScreen::MainMenu_StoryMissions:
 		{
 			if (selected_menu.size() > 15) {
 				char number = selected_menu[15];
@@ -353,52 +304,52 @@ DefineReplacementHook(OnConfirmHook) {
 				else {
 					*reinterpret_cast<std::int8_t*>(reinterpret_cast<std::uintptr_t>(_this) + 0x424) = number - '0';
 				}
-				_CarsFrontEnd_SetScreen(_this, MissionSelect, _selected_menu, true);
+				_CarsFrontEnd_SetScreen(_this, CarsFrontEndScreen::StoryMissions_MissionSelect, _selected_menu, true);
 			}
 			else {
 				*reinterpret_cast<std::int8_t*>(reinterpret_cast<std::uintptr_t>(_this) + 0x424) = 0;
-				_CarsFrontEnd_SetScreen(_this, MissionSelect, _selected_menu, true);
+				_CarsFrontEnd_SetScreen(_this, CarsFrontEndScreen::StoryMissions_MissionSelect, _selected_menu, true);
 			}
 		}
 		break;
 
-		case MissionSelect:
+		case CarsFrontEndScreen::StoryMissions_MissionSelect:
 		{
 			int unk_format_var = 0;
 			if (selected_menu[0] == 'S') {
-				(*g_GameProgressionManager)->unk_index = 0;
+				(*g_GameProgressionManager)->m_unkIndex = 0;
 			}
 			else {
-				(*g_GameProgressionManager)->unk_index = -1;
+				(*g_GameProgressionManager)->m_unkIndex = -1;
 				unk_format_var = std::atoi(_selected_menu);
 			}
 			int8_t unk_story_mission_index = *reinterpret_cast<std::int8_t*>(reinterpret_cast<std::uintptr_t>(_this) + 0x424);
 			*reinterpret_cast<char**>(reinterpret_cast<std::uintptr_t>(_this) + 0x414) = (*g_GameProgressionManager)->FormatStoryMission(unk_story_mission_index, unk_format_var);
-			_CarsFrontEnd_SetScreen(_this, MissionDetails, nullptr, true);
+			_CarsFrontEnd_SetScreen(_this, CarsFrontEndScreen::StoryMissions_MissionDetails, nullptr, true);
 		}
 		break;
 
-		case MissionDetails:
+		case CarsFrontEndScreen::StoryMissions_MissionDetails:
 			should_set_screen = true;
 			break;
 
-		case MainMenu_Badges:
+		case CarsFrontEndScreen::MainMenu_Badges:
 		{
 			const char* oct_name = nullptr;
 			if (selected_menu[6] == 'B') {
-				_CarsFrontEnd_SetScreen(_this, BadgeMenu_Badges, _selected_menu, true);
+				_CarsFrontEnd_SetScreen(_this, CarsFrontEndScreen::BadgeMenu_Badges, _selected_menu, true);
 				oct_name = "ui/badges.oct";
 			}
 			else if (selected_menu[6] == 'C') {
-				_CarsFrontEnd_SetScreen(_this, BadgeMenu_Crests, _selected_menu, true);
+				_CarsFrontEnd_SetScreen(_this, CarsFrontEndScreen::BadgeMenu_Crests, _selected_menu, true);
 				oct_name = "ui/crests.oct";
 			}
 			else if (selected_menu[6] == 'S') {
-				_CarsFrontEnd_SetScreen(_this, BadgeMenu_Suitcases, _selected_menu, true);
+				_CarsFrontEnd_SetScreen(_this, CarsFrontEndScreen::BadgeMenu_Suitcases, _selected_menu, true);
 				oct_name = "ui/suitcases.oct";
 			}
 			else {
-				_CarsFrontEnd_SetScreen(_this, BadgeMenu_Badges, _selected_menu, true);
+				_CarsFrontEnd_SetScreen(_this, CarsFrontEndScreen::BadgeMenu_Badges, _selected_menu, true);
 				oct_name = "ui/badges.oct";
 			}
 			void* engine_texture_loader = *reinterpret_cast<void**>(0x0192e194);
@@ -409,8 +360,8 @@ DefineReplacementHook(OnConfirmHook) {
 		}
 		break;
 
-		case BadgeMenu_Badges:
-		case BadgeMenu_Crests:
+		case CarsFrontEndScreen::BadgeMenu_Badges:
+		case CarsFrontEndScreen::BadgeMenu_Crests:
 			{
 				char buffer[64] = {};
 				Genie::String badge_id{ _selected_menu };
@@ -442,7 +393,7 @@ DefineReplacementHook(OnConfirmHook) {
 				char description[512] = {};
 				char* description_format = CTranslator_Translate(reinterpret_cast<void*>(0x0192674c), description_localization_label.data, true);
 				sprintf_s(description, description_format, static_cast<int>(unk6));
-				if (menu_state == BadgeMenu_Badges) {
+				if (screen == CarsFrontEndScreen::BadgeMenu_Badges) {
 					unk6 = -1.0;
 				}
 				if (unk6 < unk5) {
@@ -453,38 +404,18 @@ DefineReplacementHook(OnConfirmHook) {
 			}
 			break;
 
-		case MainMenu_CustomMissions:
-#ifdef MP_STRATEGY_ONLINE
-			if ((*reinterpret_cast<std::uint32_t*>(0x018aa724) & NetFlags::Active) != 0) {
-				logger::log_format("[CarsFrontEnd::OnConfirm] Net is enabled!");
-				if (!(*g_InputPtr)->ControllerLocked(0)) {
-					logger::log_format("[CarsFrontEnd::OnConfirm] Locking player 0 to controller 0...");
-					(*g_InputPtr)->LockPlayerToController(0, 0);
-					*reinterpret_cast<int*>(reinterpret_cast<std::uintptr_t>(_this) + 0x7DC) = 0;
-				}
-			}
-			for (auto i = 0; i < 11; i++) {
-				if (std::string_view((*g_InputPtr)->controller[i]->Identify()) == "Virtual") {
-					logger::log_format("[CarsFrontEnd::OnConfirm] Locking player 1 to controller {}...", i);
-					(*g_InputPtr)->LockPlayerToController(1, i);
-					break;
-				}
-			}
-			if (!(*g_InputPtr)->ControllerLocked(1)) {
-				logger::log_format("[CarsFrontEnd::OnConfirm] Virtual controller was not locked!");
-			}
-#endif
+		case CarsFrontEndScreen::MainMenu_CustomMissions:
 			_CarsFrontEnd_SetGameModeIndex(_this, _selected_menu);
 			if (selected_menu[6] == 'S') {
-				_CarsFrontEnd_SetScreen(_this, CustomSquadSeries, _selected_menu, true);
+				_CarsFrontEnd_SetScreen(_this, CarsFrontEndScreen::CustomSquadSeries, _selected_menu, true);
 			}
 			else {
-				(*g_GameProgressionManager)->unk_index = -1;
-				_CarsFrontEnd_SetScreen(_this, MT_Hunter, _selected_menu, true);
+				(*g_GameProgressionManager)->m_unkIndex = -1;
+				_CarsFrontEnd_SetScreen(_this, CarsFrontEndScreen::MainMenu_MissionSelect, _selected_menu, true);
 			}
 			break;
-		case MT_Hunter:
-		case MT_Hunter2:
+		case CarsFrontEndScreen::MainMenu_MissionSelect:
+		case CarsFrontEndScreen::MainMenu_MissionSelect_SquadSeries:
 			if (_selected_menu[0] == 'T') {
 				_CarsFrontEnd_SetLevelAndUnk(_this, _selected_menu);
 				_CarsFrontEnd_UnkHandleTrackLengthType(_this, _selected_menu);
@@ -492,35 +423,25 @@ DefineReplacementHook(OnConfirmHook) {
 			else {
 				_CarsFrontEnd_SetLevelAndUnk(_this, _selected_menu);
 			}
-#ifdef MP_STRATEGY_ONLINE
-			if ((*reinterpret_cast<std::uint32_t*>(0x018aa724) & NetFlags::Active) != 0) {
-				should_set_screen = true;
+			if (screen == CarsFrontEndScreen::MainMenu_MissionSelect_SquadSeries) {
+				_CarsFrontEnd_SetScreen(_this, CarsFrontEndScreen::MissionSettings_SquadSeries, nullptr, true);
 			}
 			else {
-#endif
-				if (menu_state == MT_Hunter2) {
-					_CarsFrontEnd_SetScreen(_this, MissionSettings_Unk, nullptr, true);
-				}
-				else {
-					int ai_car_count = GameProgressionManager_GetAICarCount(*g_GameProgressionManager);
-					GameProgressionManager_SetAICarCount(*g_GameProgressionManager, ai_car_count);
-					_CarsFrontEnd_SetScreen(_this, MissionSettings_Unk2, nullptr, true);
-				}
-#ifdef MP_STRATEGY_ONLINE
+				(*g_GameProgressionManager)->SetAICarCount((*g_GameProgressionManager)->GetAICarCount());
+				_CarsFrontEnd_SetScreen(_this, CarsFrontEndScreen::MissionSettings, nullptr, true);
 			}
-#endif
 			break;
-		case MainMenu_CustomMissions2:
+		case CarsFrontEndScreen::MainMenu_CustomMissions_SquadSeries:
 			_CarsFrontEnd_SetGameModeIndex(_this, _selected_menu);
-			_CarsFrontEnd_SetScreen(_this, MT_Hunter2, nullptr, true);
+			_CarsFrontEnd_SetScreen(_this, CarsFrontEndScreen::MainMenu_MissionSelect_SquadSeries, nullptr, true);
 			break;
 
-		case MissionSettings_Unk:
+		case CarsFrontEndScreen::MissionSettings_SquadSeries:
 			{
-				GameProgressionManager_FUN_004e8400(*g_GameProgressionManager, false);
+				GameProgressionManager_SetMissionTimeByMode(*g_GameProgressionManager, false);
 				GameProgressionManager_FUN_004ebaf0(*g_GameProgressionManager, *(reinterpret_cast<int*>(reinterpret_cast<std::uintptr_t>(_this) + 0x46C)));
 				std::uintptr_t local_34 = *(reinterpret_cast<std::uintptr_t*>(reinterpret_cast<std::uintptr_t>(_this) + 0x3FC));
-				while (local_34 != 0 && *reinterpret_cast<int*>(local_34 + 8) != CustomSquadSeries) {
+				while (local_34 != 0 && *reinterpret_cast<CarsFrontEndScreen*>(local_34 + 8) != CarsFrontEndScreen::CustomSquadSeries) {
 					FUN_00ef3a30(reinterpret_cast<std::uintptr_t>(_this) + 0x3E8);
 					char* dest = *reinterpret_cast<char**>(reinterpret_cast<std::uintptr_t>(_this) + 0x408);
 					local_34 = *(reinterpret_cast<std::uintptr_t*>(reinterpret_cast<std::uintptr_t>(_this) + 0x3FC));
@@ -543,39 +464,39 @@ DefineReplacementHook(OnConfirmHook) {
 				Genie_String_Destructor(&result);
 				FUN_0060e7d0(reinterpret_cast<std::uintptr_t>(_this) + 0x408, prefix_len, *reinterpret_cast<std::uintptr_t*>(*reinterpret_cast<std::uintptr_t*>(reinterpret_cast<std::uintptr_t>(_this) + 0x408) - 0xC) - prefix_len);
 				FUN_00ef3a30(reinterpret_cast<std::uintptr_t>(_this) + 0x3E8);
-				_CarsFrontEnd_SetScreen(_this, CustomSquadSeries, "FE_MT_SquadSeries", false);
+				_CarsFrontEnd_SetScreen(_this, CarsFrontEndScreen::CustomSquadSeries, "FE_MT_SquadSeries", false);
 			}
 			break;
 
-		case CustomSquadSeries:
+		case CarsFrontEndScreen::CustomSquadSeries:
 			{
 				int index = std::atoi(_selected_menu);
 				*(reinterpret_cast<int*>(reinterpret_cast<std::uintptr_t>(_this) + 0x46C)) = index;
 				GameProgressionManager_FUN_004ebab0(*g_GameProgressionManager, index);
-				_CarsFrontEnd_SetScreen(_this, MainMenu_CustomMissions2, nullptr, true);
+				_CarsFrontEnd_SetScreen(_this, CarsFrontEndScreen::MainMenu_CustomMissions_SquadSeries, nullptr, true);
 			}
 			break;
 
-		case MissionSettings_Unk2:
+		case CarsFrontEndScreen::MissionSettings:
 			should_set_screen = true;
-			GameProgressionManager_FUN_004e8400(*g_GameProgressionManager, false);
+			GameProgressionManager_SetMissionTimeByMode(*g_GameProgressionManager, false);
 			break;
 
-		case GarageConnect:
+		case CarsFrontEndScreen::GarageConnect:
 			if (_stricmp(_selected_menu, "DLC_Connect") == 0) {
 				*(reinterpret_cast<int*>(reinterpret_cast<std::uintptr_t>(_this) + 0x800)) = 1;
 			}
 			should_play_item_selected = false;
 			break;
 
-		case WorldOfCarsConnect:
+		case CarsFrontEndScreen::WorldOfCarsConnect:
 			break;
 
-		case MainMenu_Garage:
+		case CarsFrontEndScreen::MainMenu_Garage:
 			if (selected_menu.starts_with("CAR_")) {
 				void* dest = (reinterpret_cast<void*>(reinterpret_cast<std::uintptr_t>(_this) + 0x114));
 				Genie_String_Assign(dest, _selected_menu);
-				_CarsFrontEnd_SetScreen(_this, GarageDetails, nullptr, true);
+				_CarsFrontEnd_SetScreen(_this, CarsFrontEndScreen::GarageDetails, nullptr, true);
 			}
 			should_play_item_selected = false;
 			*(reinterpret_cast<float*>(reinterpret_cast<std::uintptr_t>(_this) + 0x7A4)) = 16.0f; // FIXME
@@ -583,10 +504,12 @@ DefineReplacementHook(OnConfirmHook) {
 			break;
 
 		default:
+#ifdef MP_STRATEGY_AXEL
+			axel::ui::on_confirm(_this, selected_menu);
+#endif
 			break;
 		}
 		if (should_set_screen) {
-#ifdef MP_STRATEGY_LOCAL
 			int locked_controllers = 0;
 			for (std::size_t i = 0; i < 11; i++) {
 				if ((*g_InputPtr)->IsControllerLocked(i)) {
@@ -596,8 +519,7 @@ DefineReplacementHook(OnConfirmHook) {
 			PersistentData_SetGlobal(*g_PersistentData, "NumPlayers", locked_controllers);
 			PersistentData_SetGlobal(*g_PersistentData, "MultiPlayer", locked_controllers > 1);
 			PersistentData_SetGlobal(*g_PersistentData, "ScreenFormat", locked_controllers > 4 ? 1 : locked_controllers);
-#endif
- 			_CarsFrontEnd_SetScreen(_this, CarSelect, nullptr, true);
+ 			_CarsFrontEnd_SetScreen(_this, CarsFrontEndScreen::CarSelect, nullptr, true);
 		}
 		std::uintptr_t movie = *(reinterpret_cast<std::uintptr_t*>(reinterpret_cast<std::uintptr_t>(_this) + 0xbc));
 		if (movie != 0 && should_play_item_selected) {
@@ -606,14 +528,6 @@ DefineReplacementHook(OnConfirmHook) {
 		}
 		return;
 
-	}
-};
-
-DefineReplacementHook(SetButtonLayout) {
-	static void __fastcall callback(std::uintptr_t _this, std::uintptr_t edx, int scheme) {
-		original(_this, edx, scheme);
-		int* button_map = *reinterpret_cast<int**>(_this + 0xB0);
-		button_map[55] = 6;
 	}
 };
 
@@ -655,6 +569,22 @@ DefineReplacementHook(ExternalInterfaceHandler_Callback) {
 			}
 			else if (_stricmp(method, "SetCurrGraphicType") == 0) {
 				HandleSetCurrGraphicType(movie, std::bit_cast<float>(reinterpret_cast<unsigned int*>(args)[2]));
+				return;
+			}
+			else if (_stricmp(method, "GetCurrLayoutType") == 0) {
+				HandleGetCurrLayoutType(movie);
+				return;
+			}
+			else if (_stricmp(method, "SetCurrLayoutType") == 0) {
+				HandleSetCurrLayoutType(movie, std::bit_cast<float>(reinterpret_cast<unsigned int*>(args)[2]));
+				return;
+			}
+			else if (_stricmp(method, "ArcadeEssentials_GetMotionBlurEnabled") == 0) {
+				HandleGetMotionBlurEnabled(movie);
+				return;
+			}
+			else if (_stricmp(method, "ArcadeEssentials_SetMotionBlurEnabled") == 0) {
+				HandleSetMotionBlurEnabled(movie, std::bit_cast<float>(reinterpret_cast<unsigned int*>(args)[2]));
 				return;
 			}
 			else if (_stricmp(method, "PopupMessage") == 0) {
@@ -739,7 +669,7 @@ DefineReplacementHook(GameCommonLoop_PauseMessage_HandleMessage) {
 	}
 };
 
-void __fastcall InterceptSetAutoManDrift(void* data, std::uintptr_t edx, const char* name, std::uint32_t default_value) {
+void __fastcall intercept_set_auto_man_drift(void* data, std::uintptr_t edx, const char* name, std::uint32_t default_value) {
 	int value = PersistentData_GetGlobal(data, name);
 	PersistentData_SetGlobal(data, name, (value == 1) ? 0 : 1);
 }
@@ -767,10 +697,10 @@ DefineInlineHook(OnSaveLoaded) {
 		void* _this = *reinterpret_cast<void**>(ctx.ebp.unsigned_integer - 0x28);
 		_CarsFrontEnd_UNK_004c3b70(_this);
 		if (*reinterpret_cast<bool*>((*reinterpret_cast<std::uintptr_t*>(0x018d3470)) + 0x7C)) {
-			_CarsFrontEnd_SetScreen(_this, SaveSlots, nullptr, false);
+			_CarsFrontEnd_SetScreen(_this, CarsFrontEndScreen::SaveSlots, nullptr, false);
 		}
 		else {
-			_CarsFrontEnd_SetScreen(_this, MT_FrontEnd, nullptr, false);
+			_CarsFrontEnd_SetScreen(_this, CarsFrontEndScreen::MT_FrontEnd, nullptr, false);
 		}
 	}
 };
@@ -845,7 +775,6 @@ DefineReplacementHook(LockInBro) {
 
 DefineReplacementHook(SideBashHandler) {
 	static bool __fastcall callback(ActiveMoves* _this, std::uintptr_t edx, ActorHandle victim, bool bash_tie) {
-		logger::log_format("[ActiveMoves::TriggerSideBashReactions] Attempting to handle sidebash reaction...");
 		TriggerSideBashReactions(_this, edx, victim, bash_tie);
 		return true;
 	}
@@ -885,10 +814,11 @@ DefineInlineHook(InitHudElementsRace) {
 		GameProgressionManager::MissionMode mode = *reinterpret_cast<GameProgressionManager::MissionMode*>(ctx.ebp.unsigned_integer - 0x2c);
 		int* local_8 = reinterpret_cast<int*>(ctx.ebp.unsigned_integer - 0x4);
 
-#ifdef MP_STRATEGY_LOCAL
-		int playerCount = GetPlayerCount();
-#else
-		int playerCount = 1;
+		int playerCount = get_locked_player_count();
+#ifdef MP_STRATEGY_AXEL
+		if (axel::online()) {
+			playerCount = axel::player_count();
+		}
 #endif
 
 		// assert(mode == GameProgressionManager::MissionMode::Race);
@@ -914,10 +844,11 @@ DefineInlineHook(InitHudElements) {
 		GameProgressionManager::MissionMode mode = *reinterpret_cast<GameProgressionManager::MissionMode*>(ctx.ebp.unsigned_integer - 0x2c);
 		int* local_8 = reinterpret_cast<int*>(ctx.ebp.unsigned_integer - 0x4);
 
-#ifdef MP_STRATEGY_LOCAL
-		int playerCount = GetPlayerCount();
-#else
-		int playerCount = 1;
+		int playerCount = get_locked_player_count();
+#ifdef MP_STRATEGY_AXEL
+		if (axel::online()) {
+			playerCount = axel::player_count();
+		}
 #endif
 
 		if (mode == GameProgressionManager::MissionMode::Bomb || mode == GameProgressionManager::MissionMode::Hunter || mode == GameProgressionManager::MissionMode::Arena) {
@@ -969,13 +900,6 @@ DefineInlineHook(InitHudElements) {
 	}
 };
 
-DefineReplacementHook(SetVolumeLogger) {
-	static std::uint32_t __fastcall callback(std::uintptr_t ecx, std::uintptr_t edx, int group, float unk1, float unk2) {
-		logger::log_format("[AudioEventManager::SetVolume] {}, {}, {}", group, unk1, unk2);
-		return original(ecx, edx, group, unk1, unk2);
-	}
-};
-
 DefineInlineHook(SupplyFlashArgs) {
 	static void __cdecl callback(sunset::InlineCtx & ctx) {
 		*reinterpret_cast<std::uintptr_t*>(ctx.esp.unsigned_integer) = ctx.ebp.unsigned_integer - 0xE8;
@@ -995,22 +919,12 @@ DefineInlineHook(FixTurboUI) {
 
 		std::uintptr_t* inst = *reinterpret_cast<std::uintptr_t**>(ctx.ebp.unsigned_integer - 0x18);
 		Genie::String* buttonTurbo = reinterpret_cast<Genie::String*>(ctx.ebp.unsigned_integer - 0x3C);
-		// buttonTurbo->Append(SuffixForCT((*g_InputPtr)->GetController(playerNumber)->m_uiType).data());
+		buttonTurbo->Append(SuffixForCT((*g_InputPtr)->GetController(playerNumber)->m_uiType).data());
 
 		auto func = *reinterpret_cast<void(__thiscall**)(void*, char*, const char*, const char*)>(*inst + 0x50);
 		func(inst, buttonTurbo->data, "turbo", "normal");
 	}
 };
-
-DefineInlineHook(SRandHook) {
-	static void _cdecl callback(sunset::InlineCtx & ctx) {
-		ctx.eax.unsigned_integer = 0;
-	}
-};
-
-int _cdecl RandHook() {
-	return 0x3FFF;
-}
 
 DefineInlineHook(HandleHudPositionMulti) {
 	static void _cdecl callback(sunset::InlineCtx & ctx) {
@@ -1074,7 +988,7 @@ DefineInlineHook(CheckForGraphicsMenu) {
 		const char* _selected_menu = *reinterpret_cast<const char**>(_this + 0x40C);
 		if (_selected_menu != nullptr) {
 			if (_stricmp(_selected_menu, "FE_EX_Graphics") == 0) {
-				*reinterpret_cast<const char**>(ctx.esp.unsigned_integer) = "Win32Wii_Scn_Item_Resolution,Win32Wii_Scn_GraphicQuality";
+				*reinterpret_cast<const char**>(ctx.esp.unsigned_integer) = "Win32Wii_Scn_Item_Resolution,Win32Wii_Scn_GraphicQuality,Win32Wii_Scn_ScreenLayout,ArcadeEssentials_MotionBlur";
 			}
 		}
 	}
@@ -1085,7 +999,7 @@ DefineInlineHook(CheckForGraphicsMenu2) {
 		const char* _selected_menu = *reinterpret_cast<const char**>(ctx.eax.unsigned_integer + 0x40C);
 		if (_selected_menu != nullptr) {
 			if (_stricmp(_selected_menu, "FE_EX_Graphics") == 0) {
-				*reinterpret_cast<const char**>(ctx.esp.unsigned_integer) = "text,text";
+				*reinterpret_cast<const char**>(ctx.esp.unsigned_integer) = "text,text,text,text";
 			}
 		}
 	}
@@ -1141,7 +1055,7 @@ DefineReplacementHook(FlashGuiImpRender) {
 	}
 };
 
-struct ScaleformViewport {
+struct GViewport {
 	int bufferWidth;
 	int bufferHeight;
 	int left;
@@ -1149,44 +1063,54 @@ struct ScaleformViewport {
 	int width;
 	int height;
 	int scissorLeft;
-	int scissorRight;
+	int scissorTop;
 	int scissorWidth;
 	int scissorHeight;
-	float _unk;
-	float _unk2;
+	float scale;
+	float aspectRatio;
 	int flags;
 };
 
-static_assert(sizeof(ScaleformViewport) == 0x34);
+static_assert(sizeof(GViewport) == 0x34);
 
 DefineInlineHook(AdjustScaleformViewport) {
 	static void _cdecl callback(sunset::InlineCtx & ctx) {
-		ScaleformViewport* view = reinterpret_cast<ScaleformViewport*>(ctx.ecx.unsigned_integer);
-		if (view->bufferHeight > 720.0) {
-			view->_unk = 720.0f / static_cast<float>(view->bufferHeight);
-		}
-	}
-};
+		GViewport* view = reinterpret_cast<GViewport*>(ctx.ecx.unsigned_integer);
 
-DefineReplacementHook(CarsVehicleSetSteer) {
-	static void __fastcall callback(CarsVehicle * _this, std::uintptr_t edx, float steer) {
-		bool isBwd = false;
-		Cars2VehicleDBlock* dBlock = Cars2VehicleDBlock::Get(*_this->actor);
-		if (dBlock != nullptr) {
-			if (dBlock->m_activeMoves != nullptr) {
-				// If the car is backwards driving, and is player-controlled, invert the steering input.
-				isBwd = dBlock->m_activeMoves->m_actionState == ActiveMoves::ActionState::BackwardsDriving && dBlock->m_playerNum != -1;
-			}
+		float actualW = static_cast<float>(Resolution::current().width);
+		float actualH = static_cast<float>(Resolution::current().height);
+		float aspect = actualW / actualH;
+
+		const float targetAspect = 1280.0f / 720.0f;
+		float scaleFactor = 1.0f;
+
+		if (aspect >= targetAspect) {
+			// bluedragon: 16:9 and wider...
+			scaleFactor = 720.0f / actualH;
 		}
-		*reinterpret_cast<float*>(reinterpret_cast<std::uintptr_t>(_this) + 0x8e8) = isBwd ? -steer : steer;
+		else {
+			// bluedragon: Anything narrower than 16:9...
+			scaleFactor = 1280.0f / actualW;
+		}
+
+		// bluedragon: Remove cold ball symptoms from UI (No shrinking at lower resolutions due to larger canvas shrinking UI elements)
+		if (scaleFactor > 1.0f) {
+			scaleFactor = 1.0f;
+		}
+
+		view->scale = scaleFactor;
 	}
 };
 
 DefineReplacementHook(MiniMenuAddButton) {
 	static void __fastcall callback(std::uintptr_t* _this, std::uintptr_t edx, const char* icon_key, const char* label_key) {
 		if (*_this != 0) {
-			logger::log_format("[MiniMenu::AddButton] Added button: {}, {}.", icon_key, label_key);
-			Flash_Movie_CallFlashFunction(*_this, "AddButton", 0, icon_key, label_key);
+			std::string key = icon_key;
+			key += SuffixForCT((*g_InputPtr)->GetController(0)->m_uiType);
+#ifdef _DEBUG
+			logger::log_format("[MiniMenu::AddButton] Added button: {}, {}.", key.data(), label_key);
+#endif
+			Flash_Movie_CallFlashFunction(*_this, "AddButton", 0, key.data(), label_key);
 		}
 	}
 };
@@ -1202,13 +1126,29 @@ DefineReplacementHook(MiniMenuShowTite) {
 DefineReplacementHook(MiniMenuResetButtons) {
 	static void __fastcall callback(std::uintptr_t * _this) {
 		if (*_this != 0) {
+#ifdef _DEBUG
 			logger::log_format("[MiniMenu::ResetButtons] Removed all buttons.");
 			logger::log_format("[MiniMenu::ResetButtons] Added `menu_button_main`, `Scn_Select`.");
 			logger::log_format("[MiniMenu::ResetButtons] Added `menu_button_main-cancel`, `SharedText_Back`.");
+#endif	
+			std::string main = "menu_button_main";
+			std::string back_cancel = "menu_button_back-cancel";
+			main += SuffixForCT((*g_InputPtr)->GetController(0)->m_uiType);
+			back_cancel += SuffixForCT((*g_InputPtr)->GetController(0)->m_uiType);
 
 			Flash_Movie_CallFlashFunction(*_this, "RemoveAllButtons", 0);
-			Flash_Movie_CallFlashFunction(*_this, "AddButton", 0, "menu_button_main", "Scn_Select");
-			Flash_Movie_CallFlashFunction(*_this, "AddButton", 0, "menu_button_back-cancel", "SharedText_Back");
+			Flash_Movie_CallFlashFunction(*_this, "AddButton", 0, main.data(), "Scn_Select");
+			Flash_Movie_CallFlashFunction(*_this, "AddButton", 0, back_cancel.data(), "SharedText_Back");
+		}
+	}
+};
+
+DefineReplacementHook(MiniMenuSwapFirstButton) {
+	static void __fastcall callback(std::uintptr_t * _this, std::uintptr_t edx, char* icon_key, const char* label_key) {
+		if (*_this != 0) {
+			std::string key = icon_key;
+			key += SuffixForCT((*g_InputPtr)->GetController(0)->m_uiType);
+			Flash_Movie_CallFlashFunction(*_this, "SwapFirstButton", 0, key.data(), label_key);
 		}
 	}
 };
@@ -1216,13 +1156,569 @@ DefineReplacementHook(MiniMenuResetButtons) {
 DefineInlineHook(AddButtons) {
 	static void _cdecl callback(sunset::InlineCtx & ctx) {
 		std::uintptr_t movie = **reinterpret_cast<std::uintptr_t**>(ctx.ebp.unsigned_integer - 0xc);
-		Flash_Movie_CallFlashFunction(movie, "AddButton", 0, "menu_button_main", "Scn_Select");
-		Flash_Movie_CallFlashFunction(movie, "AddButton", 0, "menu_button_back-cancel", "SharedText_Back");
+
+		std::string main = "menu_button_main";
+		std::string back_cancel = "menu_button_back-cancel";
+		main += SuffixForCT((*g_InputPtr)->GetController(0)->m_uiType);
+		back_cancel += SuffixForCT((*g_InputPtr)->GetController(0)->m_uiType);
+
+		Flash_Movie_CallFlashFunction(movie, "AddButton", 0, main.data(), "Scn_Select");
+		Flash_Movie_CallFlashFunction(movie, "AddButton", 0, back_cancel.data(), "SharedText_Back");
 	}
 };
 
-#ifndef MP_STRATEGY_ONLINE
-#define DISABLE_ATTRACT
+DefineInlineHook(SetPIPWidth) {
+	static void _cdecl callback(sunset::InlineCtx & ctx) {
+		double scale = static_cast<double>(Resolution::current().height) / 720.0;
+		ctx.eax.unsigned_integer *= scale;
+	}
+};
+
+DefineInlineHook(SetPIPHeight) {
+	static void _cdecl callback(sunset::InlineCtx & ctx) {
+		double scale = static_cast<double>(Resolution::current().height) / 720.0;
+		ctx.eax.unsigned_integer *= scale;
+	}
+};
+
+DefineInlineHook(SetShadowResolution) {
+	static void _cdecl callback(sunset::InlineCtx & ctx) {
+		*reinterpret_cast<unsigned int*>(ctx.ebp.unsigned_integer - 0x08) = resolve_shadow_quality(GLOBAL_CONFIG->shadow_quality);
+		*reinterpret_cast<unsigned int*>(ctx.ebp.unsigned_integer - 0x1C) = resolve_shadow_quality(GLOBAL_CONFIG->shadow_quality);
+		// Set the cascade count to 3 if we're using the `shadowmask_c3_rot8_nodb_ss_cs` shader.
+		if (is_shadow_quality_high(GLOBAL_CONFIG->shadow_quality)) {
+			*reinterpret_cast<unsigned int*>(ctx.ebp.unsigned_integer - 0x10) = 3;
+		}
+	}
+};
+
+DefineInlineHook(SetEnableHiResShadows) {
+	static void _cdecl callback(sunset::InlineCtx & ctx) {
+		ctx.ecx.unsigned_integer = is_shadow_quality_high(GLOBAL_CONFIG->shadow_quality) ? 1 : 0;
+	}
+};
+
+DefineInlineHook(SetEnableHiResShadows2) {
+	static void _cdecl callback(sunset::InlineCtx & ctx) {
+		ctx.eax.unsigned_integer = is_shadow_quality_high(GLOBAL_CONFIG->shadow_quality) ? 1 : 0;
+	}
+};
+
+DefineInlineHook(SetMotionBlurHook) {
+	static void _cdecl callback(sunset::InlineCtx & ctx) {
+		ctx.ecx.unsigned_integer = GLOBAL_CONFIG->motion_blur ? 0 : 1;
+	}
+};
+
+struct VertexStreamLookup {
+	D3DDECLTYPE d3d;
+	Renderer::DataType octane;
+};
+
+const std::array<VertexStreamLookup, 17> VERTEX_STREAM_CONVERSION_TABLE{
+	VertexStreamLookup{D3DDECLTYPE_FLOAT1,    Renderer::DataType::FLOAT_1},
+	VertexStreamLookup{D3DDECLTYPE_FLOAT2,    Renderer::DataType::FLOAT_2},
+	VertexStreamLookup{D3DDECLTYPE_FLOAT3,    Renderer::DataType::FLOAT_3},
+	VertexStreamLookup{D3DDECLTYPE_FLOAT4,    Renderer::DataType::FLOAT_4},
+	VertexStreamLookup{D3DDECLTYPE_UBYTE4,    Renderer::DataType::U8_4},
+	VertexStreamLookup{D3DDECLTYPE_SHORT2,    Renderer::DataType::S16_2}, // Added
+	VertexStreamLookup{D3DDECLTYPE_SHORT4,    Renderer::DataType::S16_4}, // Added
+	VertexStreamLookup{D3DDECLTYPE_UBYTE4N,   Renderer::DataType::U8_4_NORMALIZED},
+	VertexStreamLookup{D3DDECLTYPE_SHORT2N,   Renderer::DataType::S16_2_NORMALIZED},
+	VertexStreamLookup{D3DDECLTYPE_SHORT4N,   Renderer::DataType::S16_4_NORMALIZED},
+	VertexStreamLookup{D3DDECLTYPE_USHORT2N,  Renderer::DataType::U16_2_NORMALIZED}, // Added
+	VertexStreamLookup{D3DDECLTYPE_USHORT4N,  Renderer::DataType::U16_4_NORMALIZED}, // Added
+	VertexStreamLookup{D3DDECLTYPE_UDEC3,     Renderer::DataType::U10_10_10}, // Added
+	VertexStreamLookup{D3DDECLTYPE_DEC3N,     Renderer::DataType::S10_10_10_NORMALIZED}, // Added
+	VertexStreamLookup{D3DDECLTYPE_FLOAT16_2, Renderer::DataType::FLOAT16_2},
+	VertexStreamLookup{D3DDECLTYPE_FLOAT16_4, Renderer::DataType::FLOAT16_4},
+	VertexStreamLookup{D3DDECLTYPE_UNUSED,    Renderer::DataType::INVALID_TYPE},
+};
+
+DefineReplacementHook(RendererConvertTo) {
+	static D3DDECLTYPE _cdecl callback(Renderer::DataType in) {
+		for (const auto& elem : VERTEX_STREAM_CONVERSION_TABLE) {
+			if (elem.octane == in) {
+				return elem.d3d;
+			}
+		}
+		return D3DDECLTYPE_UNUSED;
+	}
+};
+
+DefineReplacementHook(LockPlayerToController) {
+	static void _fastcall callback(WindowsSystemInputDriver * _this, std::uintptr_t edx, int player, int controller) {
+		logger::log_format("[WindowsSystemInputDriver::LockPlayerToController] Locked Player: {} -> Controller {}", player, controller);
+		original(_this, edx, player, controller);
+	}
+};
+
+DefineReplacementHook(FixChallengeManagerUnk) {
+	static bool __fastcall callback(void* _this, std::uintptr_t edx, int param_2, unsigned int param_3, unsigned int actorHandle) {
+		if (actorHandle == 0) {
+			if (FUN_00f677b0(*reinterpret_cast<void**>(0x0192c5ec), param_2) == 0) {
+				FUN_00f66ca0(*reinterpret_cast<void**>(0x0192c5ec), param_2, param_3);
+				return true;
+			}
+		}
+		else {
+			CActor* actor = CActor::FromHandle(actorHandle);
+			if ((!(*g_RaceManager)->RacerIsAIControlled(actorHandle, -1)) && actor != nullptr) {
+				Avatar* avatar = Avatar::FromCActor(actor);
+				if (avatar == nullptr) {
+					if (FUN_00f677b0(*reinterpret_cast<void**>(0x0192c5ec), param_2) == 0) {
+						FUN_00f66ca0(*reinterpret_cast<void**>(0x0192c5ec), param_2, param_3);
+						return true;
+					}
+				}
+				else {
+					int iVar2 = FUN_00f677b0(*reinterpret_cast<void**>(0x0192c5ec), param_2);
+					if (iVar2 == 0) {
+						FUN_00f66ca0(*reinterpret_cast<void**>(0x0192c5ec), param_2, param_3);
+						return true;
+					}
+					else if (iVar2 == 1) {
+						FUN_00f66cf0(*reinterpret_cast<void**>(0x0192c5ec), param_2, avatar->GetPlayerId(), param_3);
+						return true;
+					}
+				}
+			}
+		}
+		return false;
+	}
+};
+
+DefineReplacementHook(CarsGame_PlayIntroVideos) {
+	static void __fastcall callback(void* _this) {
+		AudioEventManager_SetVolume(*g_AudioEventManager, 1, 1.0, 0.0);
+		(*g_FlashGui)->Initialize(1, 0x400000);
+		Flash::Movie* subtitlesMovie = (*g_FlashGui)->AddMovie("subtitles", true, -1.0, -1.0);
+		Subtitles subtitles(subtitlesMovie, false);
+		(*g_FlashGui)->Update();
+
+		FMV::Player player{};
+		player.Begin();
+		bool aborted = false;
+		float delayTime = 70.0f;
+		
+		logger::log_format("[CarsGame::PlayIntroVideos] Video `delayTime`: {}", delayTime);
+		
+		player.Queue("%1/Pixar_Logo", true, delayTime, false, false);
+		player.Play(&aborted);
+		player.Queue("%1/avlogo", true, 0.0, false, false);
+		player.Play(&aborted);
+		player.Queue("%1/gslogo", true, 0.0, false, false);
+		player.Play(&aborted);
+		player.Queue("%1/DIS", true, delayTime, false, false);
+		player.Play(&aborted);
+		player.Queue("%1/Copyright", false, 0.0, false, false);
+		player.Play(&aborted);
+		player.Queue("%1/Opening", true, delayTime, false, false);
+		player.Play(&aborted);
+		player.End();
+
+		if (subtitlesMovie != nullptr) {
+			(*g_FlashGui)->RemoveMovie(&subtitlesMovie, false);
+		}
+
+		(*g_FlashGui)->Terminate(1, false);
+	}
+};
+
+DefineReplacementHook(HudSkateReticuleHook) {
+	static void* __fastcall callback(void* _this, std::uintptr_t edx, unsigned int param_2, float param_3, float param_4) {
+		float actualW = static_cast<float>(Resolution::current().width);
+		float actualH = static_cast<float>(Resolution::current().height);
+		float aspect = actualW / actualH;
+
+		constexpr double targetAspect = 1280.0 / 720.0;
+		float scaleFactor = 1.0f;
+
+		if (aspect >= targetAspect) {
+			scaleFactor = 720.0f / actualH;
+		}
+		else {
+			scaleFactor = 1280.0f / actualW;
+		}
+
+		// bluedragon: Reticle alightment low res fix
+		if (scaleFactor > 1.0f) {
+			scaleFactor = 1.0f;
+		}
+
+		return original(_this, edx, param_2, param_3 * scaleFactor, param_4 * scaleFactor);
+	}
+};
+
+DefineInlineHook(BackwardSteeringInvert) {
+	static void __cdecl callback(sunset::InlineCtx& ctx) {
+		CarsVehicle* vehicle = reinterpret_cast<CarsVehicle*>(ctx.ecx.unsigned_integer);
+		if (vehicle->IsAIControlled()) {
+			return;
+		}
+		if (vehicle->GetActiveMoves()->m_actionState != ActiveMoves::ActionState::BackwardsDriving) {
+			return;
+		}
+		float* steeringInput = reinterpret_cast<float*>(reinterpret_cast<std::uintptr_t>(vehicle) + 0x8e8);
+		*steeringInput = -*steeringInput;
+	}
+};
+
+DefineInlineHook(FixBwdEyeL) {
+	static void __cdecl callback(sunset::InlineCtx& ctx) {
+		CarsVehicle* vehicle = *reinterpret_cast<CarsVehicle**>(ctx.ebp.unsigned_integer - 0x400);
+		if (vehicle->IsAIControlled()) {
+			return;
+		}
+		*reinterpret_cast<const char**>(ctx.esp.unsigned_integer) = "emo_bwd_R";
+	}
+};
+
+DefineInlineHook(FixBwdEyeR) {
+	static void __cdecl callback(sunset::InlineCtx& ctx) {
+		CarsVehicle* vehicle = *reinterpret_cast<CarsVehicle**>(ctx.ebp.unsigned_integer - 0x400);
+		if (vehicle->IsAIControlled()) {
+			return;
+		}
+		*reinterpret_cast<const char**>(ctx.esp.unsigned_integer) = "emo_bwd_L";
+	}
+};
+
+DefineInlineHook(FixBwdLean) {
+	static void __cdecl callback(sunset::InlineCtx& ctx) {
+		CarsVehicle* vehicle = *reinterpret_cast<CarsVehicle**>(ctx.ebp.unsigned_integer - 0x400);
+		if (vehicle->IsAIControlled()) {
+			return;
+		}
+		if (vehicle->GetActiveMoves()->m_actionState != ActiveMoves::ActionState::BackwardsDriving) {
+			return;
+		}
+
+		float* leanVal = reinterpret_cast<float*>(ctx.ebp.unsigned_integer - 0x188);
+		// bluedragon: IT WAS A FRIGGIN BLEND WEIGHT
+		*leanVal = 1.0f - *leanVal;
+	}
+};
+
+DefineReplacementHook(DisplayWeaponTutorialHook) {
+	static void __fastcall callback(CarsWeaponInventory* _this) {
+		int playerNum = (*g_RaceManager)->GetPlayerNumber(*CActor::FromHandle(_this->GetActor().GetHandle()));
+		HudActiveInfo* activeInfo = (*g_CarsHud)->hud[playerNum]->m_hudActiveInfo;
+		if (activeInfo != nullptr) {
+			if ((*g_InputPtr)->GetController(playerNum) != nullptr) {
+				std::string fireButton = "button_fire";
+				fireButton += SuffixForCT((*g_InputPtr)->GetController(playerNum)->m_uiType);
+				activeInfo->SetTextAndPlayAnim(CTranslator_Translate(reinterpret_cast<void*>(0x0192674c), "WeaponUse", true), WEAPON_TUTORIAL_LIVE_TIME, CTranslator_Translate(reinterpret_cast<void*>(0x0192674c), fireButton.data(), true), "normal", false);
+			}
+		}
+	}
+};
+
+DefineInlineHook(FixFireButtonUI) {
+	static void __cdecl callback(sunset::InlineCtx& ctx) {
+		int index = *reinterpret_cast<int*>(ctx.ebp.unsigned_integer - 0x18);
+		Genie::String* buttonFire = reinterpret_cast<Genie::String*>(ctx.ebp.unsigned_integer - 0x1C);
+		buttonFire->Append(SuffixForCT((*g_InputPtr)->GetController(index)->m_uiType).data());
+	}
+};
+
+DefineInlineHook(FixRevItButtonUI) {
+	static void __cdecl callback(sunset::InlineCtx & ctx) {
+		Genie::String* buttonRevIt = reinterpret_cast<Genie::String*>(ctx.ebp.unsigned_integer - 0xEC);
+		HudGauge* _this = *reinterpret_cast<HudGauge**>(ctx.ebp.unsigned_integer - 0x118);
+		int playerId = 0;
+		for (auto i = 0; i < 4; i++) {
+			if ((*g_CarsHud)->hud[i] != nullptr) {
+				if ((*g_CarsHud)->hud[i]->m_hudGuage == _this) {
+					playerId = i;
+				}
+			}
+		}
+		buttonRevIt->Append(SuffixForCT((*g_InputPtr)->GetController(playerId)->m_uiType).data());
+	}
+};
+
+DefineInlineHook(FixHudTutorialButtonPrompt) {
+	static void __cdecl callback(sunset::InlineCtx & ctx) {
+		std::uintptr_t handler = *reinterpret_cast<std::uintptr_t*>(ctx.ebp.unsigned_integer - 0x40);
+		std::uintptr_t userData = *reinterpret_cast<std::uintptr_t*>(handler + 0x14);
+		int playerNum = *reinterpret_cast<int*>(userData + 0x80);
+		std::string prompt = *reinterpret_cast<char**>(ctx.ebp.unsigned_integer - 0x10);
+		prompt += SuffixForCT((*g_InputPtr)->GetController(playerNum)->m_uiType).data();
+		char* translated = CTranslator_Translate(reinterpret_cast<void*>(0x0192674c), prompt.data(), true);
+		ctx.eax.unsigned_integer = reinterpret_cast<std::uintptr_t>(translated);
+	}
+};
+
+DefineInlineHook(FixAutoDriftButtonUI) {
+	static void __cdecl callback(sunset::InlineCtx & ctx) {
+		int index = *reinterpret_cast<int*>(ctx.ebp.unsigned_integer - 0x24);
+		Genie::String* feAutoDriftButton = reinterpret_cast<Genie::String*>(ctx.ebp.unsigned_integer - 0x28);
+		feAutoDriftButton->Append(SuffixForCT((*g_InputPtr)->GetController(index)->m_uiType).data());
+	}
+};
+
+DefineInlineHook(FixLoadTipUI) {
+	static void __cdecl callback(sunset::InlineCtx & ctx) {
+		ControllerInputDriver* controller = (*g_InputPtr)->GetAssertController();
+		if ((*g_InputPtr)->ControllerLocked(0)) {
+			controller = (*g_InputPtr)->GetController(0);
+		}
+		bool isControllerSpecific = *reinterpret_cast<bool*>(ctx.ebp.unsigned_integer - 0x111);
+		if (controller != nullptr && isControllerSpecific) {
+			ctx.eax.unsigned_integer = reinterpret_cast<std::uintptr_t>(LoadTipSuffixForCT(controller->m_uiType).data());
+		}
+	}
+};
+
+DefineReplacementHook(FlashControlMapperUpdateHook) {
+	static void __fastcall callback(Flash::FlashControlMapper * _this) {
+		ControlMapper_Update(_this);
+		if (0.0 < _this->timer) {
+			_this->timer = _this->timer - static_cast<float>(*g_OSFrameMS) * 0.001;
+		}
+		if (_this->applyDelay != false) {
+			_this->buttonDownDelay = CMasterTimer_GetOSTime() + _this->buttonWaitTime;
+			_this->applyDelay = false;
+		}
+		if (_this->buttonDownDelay != 0) {
+			if (_this->buttonDownDelay < CMasterTimer_GetOSTime()) {
+				_this->buttonDownDelay = 0;
+			}
+		}
+
+		if (_this->device == nullptr) {
+			return;
+		}
+		if (!_this->device->Connected()) {
+			return;
+		}
+
+		_this->SetActionMapPlatform(ActionMapPlatformForCT(_this->device->m_uiType).data());
+	}
+};
+
+DefineInlineHook(FlashInputActionMapHook) {
+	static void __cdecl callback(sunset::InlineCtx & ctx) {
+		ControllerInputDriver* controller = (*g_InputPtr)->GetUnlockedController(0);
+		if (controller != nullptr) {
+			*reinterpret_cast<const char**>(ctx.esp.unsigned_integer) = (ActionMapPlatformForCT(controller->m_uiType).data());
+		}
+	}
+};
+
+DefineReplacementHook(CCMSetPlayerID) {
+	static void __fastcall callback(CarsControlMapper * _this, std::uintptr_t, int playerId) {
+		_this->m_playerId = playerId;
+		_this->m_driver = (*g_InputPtr)->GetController(playerId);
+		if (_this->m_driver != nullptr) {
+			_this->SwitchControlScheme(XMLNameForCT(_this->m_driver->m_uiType).data());
+		}
+	}
+};
+
+DefineReplacementHook(TransDebugHook) {
+	static char* __fastcall callback(void * _this, std::uintptr_t, const char* label, bool unk) {
+		char* result = original(_this, 0, label, unk);
+		logger::log_format("[CTranslator::Translate] Mapped Devon Key: `{}` -> `{}`", label, result);
+		return result;
+	}
+};
+
+struct TranslateInfo {
+	wchar_t* pKey;
+	void* pResult;
+	char* pInstanceName;
+	unsigned char Flags;
+};
+
+std::string WideToUTF8(const std::wstring& wstr) {
+	std::string retStr;
+	if (!wstr.empty()) {
+		int sizeRequired = WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), -1, nullptr, 0, nullptr, nullptr);
+		if (sizeRequired > 0) {
+			std::vector<char> utf8String(sizeRequired);
+			int bytesConverted = WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), -1, &utf8String[0], utf8String.size(), nullptr, nullptr);
+			if (bytesConverted != 0) {
+				retStr = &utf8String[0];
+			}
+			else {
+				return "";
+			}
+		}
+	}
+	return retStr;
+}
+
+std::wstring UTF8ToWide(const std::string& str) {
+	std::wstring retStr;
+	if (!str.empty()) {
+		int sizeRequired = MultiByteToWideChar(CP_UTF8, 0, str.c_str(), -1, nullptr, 0);
+		if (sizeRequired > 0) {
+			std::vector<wchar_t> wideString(sizeRequired);
+			int charsConverted = MultiByteToWideChar(CP_UTF8, 0, str.c_str(), -1, &wideString[0], wideString.size());
+			if (charsConverted != 0) {
+				retStr = &wideString[0];
+			}
+			else {
+				return L"";
+			}
+		}
+	}
+	return retStr;
+}
+
+DefineReplacementHook(FlashToDevonHook) {
+	static void __fastcall callback(void* _this, std::uintptr_t, TranslateInfo * info) {
+		wchar_t* key = info->pKey;
+		if (key[0] == L'@') {
+			std::string sanitized = WideToUTF8(info->pKey + 1);
+			if (key[1] == L'^') {
+				int controllerID = static_cast<int>(key[2]) - '0';
+				sanitized = sanitized.substr(2);
+				if ((*g_InputPtr)->GetController(controllerID) != nullptr) {
+					sanitized += SuffixForCT((*g_InputPtr)->GetController(controllerID)->m_uiType);
+				}
+			}
+			char* localized = CTranslator_Translate(reinterpret_cast<void*>(0x0192674c), sanitized.data(), false);
+			if (localized == nullptr) {
+				sanitized = "[" + sanitized + "]";
+				GFxTranslator_TranslateInfo_SetResult_UTF8(info, sanitized.data(), -1);
+			}
+			else {
+				std::wstring wideLocalized = UTF8ToWide(localized);
+				if ((*g_FlashGui)->UsingRightToLeftFont()) {
+					FlipEnglishWords(wideLocalized.data(), wideLocalized.size());
+				}
+				GFxTranslator_TranslateInfo_SetResult_UTF16(info, wideLocalized.data(), -1);
+				info->Flags = info->Flags | 2;
+			}
+		}
+		else {
+#ifdef _DEBUG
+			std::string sanitized = WideToUTF8(info->pKey);
+			logger::log_format("[Flash::Movie::FlashToDevon::Translate] Untranslated Devon Key: {}!", sanitized);
+#endif
+			if ((*g_FlashGui)->UsingRightToLeftFont()) {
+				FlipEnglishWords(key, wcslen(key));
+			}
+			GFxTranslator_TranslateInfo_SetResult_UTF16(info, key, -1);
+			info->Flags = info->Flags | 2;
+		}
+		return;
+	}
+};
+
+DefineReplacementHook(CarsFrontEnd_ShowControllerPull_HandleMessage) {
+	static void __fastcall callback(GenericMessageHandler<CarsFrontEnd>* _this, std::uintptr_t edx, ShowControllerPullPacket* udata, std::uint32_t actor_handle, std::uint32_t posted) {
+		if (_this->m_reference->m_isUpdating) {
+			bool isMp = false;
+			if (_this->m_reference->currentScreen == CarsFrontEndScreen::CarSelect) {
+				if (PersistentData_GetGlobal(*g_PersistentData, "MultiPlayer") != 0) {
+					isMp = true;
+				}
+			}
+			int index = (*g_InputPtr)->GetPlayerIndex((*g_InputPtr)->GetUnlockedController(udata->playerIndex));
+			if (isMp || index == 0) {
+				ControllerInputDriver* controller = (*g_InputPtr)->GetUnlockedController(udata->playerIndex);
+				if (controller != nullptr) {
+					logger::log_format("[ShowControllerPull::HandleMessage] Connected: {}", controller->Connected());
+					if (controller->Connected() && udata->type == 2) {
+						if (_this->m_reference->field34_0xb8 != nullptr) {
+							if (isMp) {
+								Flash_Movie_CallFlashFunction(reinterpret_cast<std::uintptr_t>(_this->m_reference->field34_0xb8), "SetAutoDriftButton", 0);
+							}
+							else if (_this->m_reference->currentScreen == CarsFrontEndScreen::CarSelect) {
+								Flash_Movie_CallFlashFunction(reinterpret_cast<std::uintptr_t>(_this->m_reference->field34_0xb8), "UpdateAutoMan", 0);
+							}
+						}
+
+						if (_this->m_reference->miniMenu != nullptr && index == 0) {
+							Flash_Movie_CallFlashFunction(reinterpret_cast<std::uintptr_t>(_this->m_reference->miniMenu->movie), "SwapButtons", 0, SuffixForCT(controller->m_uiType).data());
+						}
+					}
+				}
+			}
+
+		}
+		
+	}
+};
+
+DefineReplacementHook(ErrorPopup_HideControllerPullMessage_HandleMessage) {
+	static void __fastcall callback(GenericMessageHandler<void>*_this, std::uintptr_t edx, HideControllerPullPacket* udata, std::uint32_t actor_handle, std::uint32_t posted) {
+		original(_this, edx, udata, actor_handle, posted);
+
+		Avatar* avatar = reinterpret_cast<Avatar*>(Players_GetAvatarFromPlayerId(udata->playerIndex));
+		if (avatar != nullptr) {
+			if (avatar->IsPlayerControlled()) {
+				CarsControlMapper* ccm = Cars2VehicleDBlock::Get(*avatar)->m_carsControlMapper;
+				ccm->m_driver = (*g_InputPtr)->GetController(udata->playerIndex);
+				if (ccm->m_driver != nullptr) {
+					Flash_Movie_CallFlashFunction(reinterpret_cast<std::uintptr_t>((*g_CarsHud)->hud[udata->playerIndex]->m_movie), "SwapButtons", 0, SuffixForCT(ccm->m_driver->m_uiType).data());
+					ccm->SwitchControlScheme(XMLNameForCT(ccm->m_driver->m_uiType).data());
+				}
+				(*g_RaceManager)->UpdateRacerControlContexts();
+			}
+		}
+	}
+};
+
+#ifdef MP_STRATEGY_AXEL
+
+DefineReplacementHook(GetOptionsListHook) {
+	static void __fastcall callback(CarsFrontEnd * _this, std::uintptr_t edx, char** outOptionsList) {
+		CarsFrontEndScreen screen = *reinterpret_cast<CarsFrontEndScreen*>(reinterpret_cast<std::uintptr_t>(_this) + 0xA8);
+		if (auto optionsList = axel::ui::retrieve_options_list(_this, screen); optionsList.has_value()) {
+			std::string value = optionsList.value();
+			*outOptionsList = reinterpret_cast<char*>(operator_new_array(value.size() + 1));
+			std::memcpy(*outOptionsList, value.data(), value.size());
+			(*outOptionsList)[value.size()] = 0;
+		}
+		else {
+			original(_this, edx, outOptionsList);
+		}
+	}
+};
+
+DefineReplacementHook(CarsFrontEnd_UpdateHook) {
+	static void __fastcall callback(CarsFrontEnd * _this) {
+		axel::ui::update(_this);
+		original(_this);
+	}
+};
+
+DefineInlineHook(HandleForeignSetScreen) {
+	static void _cdecl callback(sunset::InlineCtx & ctx) {
+		std::uintptr_t _this = *reinterpret_cast<std::uintptr_t*>(ctx.ebp.unsigned_integer - 0x184);
+		CarsFrontEndScreen screen = *reinterpret_cast<CarsFrontEndScreen*>(_this + 0xA8);
+		logger::log_format("[CarsFrontEnd::SetScreen] Entering Foreign Screen: {}", static_cast<int>(screen));
+		axel::ui::on_set_screen(reinterpret_cast<CarsFrontEnd*>(_this), screen, reinterpret_cast<const char**>(ctx.ebp.unsigned_integer - 0x14));
+	}
+};
+
+DefineReplacementHook(OncePerFrame) {
+	static void __fastcall callback(void* _this) {
+		if (SteamAPI_IsSteamRunning()) {
+			axel::update_context();
+		}
+		original(_this);
+	}
+};
+
+auto init_axel_ui_hooks() -> void {
+	GetOptionsListHook::install_at_ptr(0x004be500);
+	HandleForeignSetScreen::install_at_ptr(0x004c276f);
+	CarsFrontEnd_UpdateHook::install_at_ptr(0x004bb1d0);
+	OncePerFrame::install_at_ptr(0x0080d6c0);
+
+	// Adds a new Online sub-menu to the main menu.
+	static const char MAIN_MENU_OPTIONS_MENU_ITEMS[] = "FE_MM_StoryMissions,FE_MM_CustomMissions,FE_MM_Badges,FE_MM_Extras,FE_MM_Garage,FE_MM_Axel,Win32Wii_Scn_ExitToWindows";
+	sunset::inst::push_u32(reinterpret_cast<void*>(0x004bf101), reinterpret_cast<std::uintptr_t>(&MAIN_MENU_OPTIONS_MENU_ITEMS));
+	axel::init_context();
+	axel::ingame::install_hooks();
+}
+
 #endif
 
 extern "C" void __stdcall Pentane_Main() {
@@ -1237,7 +1733,7 @@ extern "C" void __stdcall Pentane_Main() {
 	}
 	else {
 		if (!GLOBAL_CONFIG->read()) {
-			logger::log_format("[ArcadeEssentials::AEConfig::read] `settings.toml` is missing! VSync will be enabled, and the game window will attempt to match 1280x720.");
+			logger::log_format("[ArcadeEssentials::AEConfig::read] `settings.toml` is missing! VSync will be enabled, motion blur will be enabled, the game window will attempt to match 1280x720, and game progression will be disabled.");
 			GLOBAL_CONFIG->finalize();
 		}
 		if (GLOBAL_CONFIG->vsync) {
@@ -1252,16 +1748,49 @@ extern "C" void __stdcall Pentane_Main() {
 			sunset::utils::set_permission(reinterpret_cast<void*>(0x00d70b58), 4, sunset::utils::Perm::ExecuteReadWrite);
 			*reinterpret_cast<std::uint32_t*>(0x00d70b58) = static_cast<std::uint32_t>(GLOBAL_CONFIG->window_height);
 		}
+		if (GLOBAL_CONFIG->enable_progression) {
+			// Fixes an issue where the game would constantly force all characters/modes to be unlocked on every `CarsFrontEnd::Update` call.
+			sunset::inst::nop(reinterpret_cast<void**>(0x004bb200), 5);
+		}
+		if (GLOBAL_CONFIG->enable_intro_fmvs) {
+			// Un-stubs the function responsible for queuing the original game's intro video playlist.
+			CarsGame_PlayIntroVideos::install_at_ptr(0x005558f0);
+		}
+		if (!GLOBAL_CONFIG->enable_attract_fmvs) {
+			// Prevents the game from sending you to the attract videos at the title screen.
+			sunset::utils::set_permission(reinterpret_cast<void*>(0x004bc2c5), 1, sunset::utils::Perm::ExecuteReadWrite);
+			*reinterpret_cast<char*>(0x004bc2c5) = 0xEB;
+		}
+		if (GLOBAL_CONFIG->enable_fast_nav) {
+			// Stubs the `SetButtonDealy` ExternalInterface function to enable unrestricted menu navigation speed.
+			sunset::inst::nop(reinterpret_cast<void*>(0x0116ac12), 0xC);
+		}
 
 		/* DEBUGGING HOOKS START */
 #ifdef _DEBUG
-		// CallFlashFunction::install_at_ptr(0x01168710);
-		// CarsFrontEnd_GoBack::install_at_ptr(0x004be200);
-		// SetVolumeLogger::install_at_ptr(0x007e0c30);
+
+		TransDebugHook::install_at_ptr(0x00cf6dd0);
+
+		CallFlashFunction::install_at_ptr(0x01168710);
+		
+		// Allows multiple instances of the game.
+		sunset::inst::jmp(reinterpret_cast<void*>(0x0080d650), reinterpret_cast<void*>(0x0080cf40));
+		sunset::inst::nop(reinterpret_cast<void*>(0x0080dc53), 17);
+
+		// Logs when any player is locked to a controller.
+		LockPlayerToController::install_at_ptr(0x00816dd0);
+
 		// init_message_logger_arcade();
 #endif
-		init_testing();
+
+#if defined(MP_STRATEGY_AXEL) || defined(_DEBUG)
+		CarsFrontEnd_GoBack::install_at_ptr(0x004be200);
+#endif
 		/* DEBUGGING HOOKS END */
+
+#ifdef MP_STRATEGY_AXEL
+		init_axel_ui_hooks();
+#endif
 
 		// Change the window title from Octane2 Renderer Window -> Cars 2: Arcade
 		char window_title[] = "Cars 2: Arcade";
@@ -1271,32 +1800,20 @@ extern "C" void __stdcall Pentane_Main() {
 		// Allows the window's title bar to properly respond to system-wide Dark Mode.
 		DarkModeWindowTitle::install_at_ptr(0x00834b08);
 
-#ifdef DISABLE_ATTRACT
 		// Set's ArcadeManager's initial VideoState to 16 (GAME_START), in order to force the game to skip all intro cutscenes.
 		sunset::utils::set_permission(reinterpret_cast<void*>(0x004512ad), 1, sunset::utils::Perm::ExecuteReadWrite);
 		*reinterpret_cast<char*>(0x004512ad) = 16;
 
-		// Prevents the game from sending you to the attract videos at the title screen.
-		sunset::utils::set_permission(reinterpret_cast<void*>(0x004bc2c5), 1, sunset::utils::Perm::ExecuteReadWrite);
-		*reinterpret_cast<char*>(0x004bc2c5) = 0xEB;
-#endif
 		// Kills the 16s timer for the car select and track select screens.
 		sunset::inst::nop(reinterpret_cast<void*>(0x004bc7d4), 4);
 		sunset::inst::nop(reinterpret_cast<void*>(0x004bc4f3), 4);
 		sunset::inst::nop(reinterpret_cast<void*>(0x004bbbfe), 4);
 		sunset::inst::nop(reinterpret_cast<void*>(0x004bbd1f), 8);
 
-#ifdef DISABLE_ATTRACT
 		// Replaces a call to CMessageDispatcher::SendMessageToAll that shuts off the Globe for a call to CarsFrontEnd::SetScreen to allow the game to boot directly to the title screen.
 		sunset::inst::nop(reinterpret_cast<void*>(0x004ba81c), 19);
 		SetInitialScreenState::install_at_ptr(0x004ba81c);
-#else
-		// If net is disabled, send the user to the title screen after exiting attract.
-		sunset::inst::push_u8(reinterpret_cast<void*>(0x004bb6a1), TitleMenu);
-		// Otherwise, send them to mission select.
-		sunset::inst::push_u8(reinterpret_cast<void*>(0x004bb67e), MainMenu_CustomMissions);
-		sunset::inst::push_u8(reinterpret_cast<void*>(0x004bbe40), MainMenu_CustomMissions);
-#endif
+		
 		static const char GLOBE_ON[] = "GlobeOn\0";
 		// Removes a call to CMessageDispatcher::SendMessageToAll from a CarsFrontEnd member function that shuts off the Globe on the title screen.
 		sunset::inst::nop(reinterpret_cast<void*>(0x004ba108), 19);
@@ -1317,8 +1834,9 @@ extern "C" void __stdcall Pentane_Main() {
 		sunset::inst::nop(reinterpret_cast<void*>(0x004c3b33), 0x33);
 		OnSaveLoaded::install_at_ptr(0x004c3b33);
 		
-		// Forcibly maps the A/Cross button to 55, allowing menu navigation with A/Cross.
-		SetButtonLayout::install_at_ptr(0x01163f70);
+		// Maps the A/Cross instead of the START button to 'X', allowing menu navigation with A/Cross.
+		sunset::inst::push_u8(reinterpret_cast<void*>(0x0116c2cc), static_cast<std::uint8_t>(ControllerButton::Cross));
+		sunset::inst::push_u8(reinterpret_cast<void*>(0x01163fd0), static_cast<std::uint8_t>(ControllerButton::Cross));
 
 		// Redirects the game's WinArcadeInputDriver to the otherwise-unused WindowsSystemInputDriver.
 		sunset::inst::push_u32(reinterpret_cast<void*>(0x0080cf64), sizeof(WindowsSystemInputDriver)); // Patch argument to operator.new
@@ -1333,7 +1851,7 @@ extern "C" void __stdcall Pentane_Main() {
 		// (looking at u max)
 		sunset::utils::set_permission(reinterpret_cast<void*>(0x00455650), 1, sunset::utils::Perm::ExecuteReadWrite);
 		*reinterpret_cast<std::uint8_t*>(0x00455650) = 0xC3;
-			
+
 		// Disables AutoPilot
 		sunset::inst::nop(reinterpret_cast<void*>(0x004f3c67), 0x2A);
 		
@@ -1351,11 +1869,11 @@ extern "C" void __stdcall Pentane_Main() {
 		// Prevents the QR code image from being generated.
 		sunset::utils::set_permission(reinterpret_cast<void*>(0x00466000), 1, sunset::utils::Perm::ExecuteReadWrite);
 		*reinterpret_cast<std::uint32_t*>(0x00466000) = 0x00000CC2;
-#ifdef DISABLE_ATTRACT
+
 		// Force initialize the local player struct on the first call to ArcadeManager::UpdateFrontEnd by setting a local variable to 1.
 		// As this expects the first tick to send the player straight to the title screen, this approach will NOT work if attract videos are re-enabled.
 		ForceInitializeLocalPlayerOnFirstTick::install_at_ptr(0x0045218b);
-#endif
+
 		// Instead of reading from the pause global variable like PC does, Arcade instead... checks the lower bits of g_Game? Whatever, this fixes that.
 		ShouldPauseHook::install_at_ptr(0x00ecade0);
 		// Patches two functions to properly update the pause flag.
@@ -1365,14 +1883,14 @@ extern "C" void __stdcall Pentane_Main() {
 		GameCommonLoop_PauseMessage_HandleMessage::install_at_ptr(0x00eb66d0);
 
 		// Forces the AutoDrift_ PersistentData globals to toggle between 1 and 0 instead of being forced to 1 no matter what.
-		sunset::inst::call(reinterpret_cast<void*>(0x004cd3e6), InterceptSetAutoManDrift);
+		sunset::inst::call(reinterpret_cast<void*>(0x004cd3e6), intercept_set_auto_man_drift);
 		// Updates a local variable with the last set PersistentData value for AutoDrift_.
 		SetAutoManDriftLocalVarFix::install_at_ptr(0x004cd3fc);
 		// Fixes an issue where the UI doesn't update until the second X press.
 		GetAutoManDriftFix::install_at_ptr(0x004cd4f7);
 
 		// Un-stubs the function responsible for initializing the clearance level data and passing it over to Flash.
-		sunset::inst::jmp(reinterpret_cast<void*>(0x004b8790), InitClearanceLevelData);
+		sunset::inst::jmp(reinterpret_cast<void*>(0x004b8790), init_clearance_level_data);
 
 		// Prevents the game from using ArcadeData's master volume on restarting an event.
 		sunset::inst::nop(reinterpret_cast<void*>(0x004f75a7), 5);
@@ -1395,6 +1913,11 @@ extern "C" void __stdcall Pentane_Main() {
 		sunset::utils::set_permission(reinterpret_cast<void*>(0x004F3B79), 1, sunset::utils::Perm::ExecuteReadWrite);
 		*reinterpret_cast<std::uint8_t*>(0x004F3B79) = 0;
 
+		// Fixes an issue where finish times would be clamped to 180s.
+		sunset::inst::nop(reinterpret_cast<void*>(0x00500a2a), 8);
+		sunset::inst::nop(reinterpret_cast<void*>(0x00500baf), 8);
+		sunset::inst::nop(reinterpret_cast<void*>(0x0050248d), 10);
+
 		// Restores the ability for cars to spin out.
 		HandleSpinOut::install_at_ptr(0x006c3740);
 		sunset::inst::jmp(reinterpret_cast<void*>(0x006d73a0), HandleWipeout);
@@ -1407,6 +1930,9 @@ extern "C" void __stdcall Pentane_Main() {
 		*reinterpret_cast<std::uint32_t*>(0x006F96B2) = 0x9004C483;
 		*reinterpret_cast<std::uint8_t*>(0x006F96B6) = 0x90;
 		sunset::inst::nop(reinterpret_cast<void**>(0x006f96bc), 6);
+
+		// Fixes an issue where ITZ would not kill in multiplayer.
+		sunset::inst::nop(reinterpret_cast<void*>(0x006bf40a), 0x1A);
 
 		// Fixes an issue where lemon cars would remain indefinetly `Invulnerable`.
 		BeginFrameHook::install_at_ptr(0x006d432c);
@@ -1436,13 +1962,6 @@ extern "C" void __stdcall Pentane_Main() {
 		// Removes a premature `jmp` that otherwise ranks AI sidestep actions as 0.0f no matter what. (WTF Microsoft? How is this code still there past the return? Whatever, thanks I guess...)
 		sunset::inst::nop(reinterpret_cast<void*>(0x004215c9), 11);
 
-#if defined(_DEBUG) || defined(MP_STRATEGY_ONLINE)
-		// Sets the random seed to zero instead of the system time.
-		SRandHook::install_at_ptr(0x00450c48);
-		// Forces `std::rand` to always return 0x3FFF.
-		sunset::utils::set_permission(reinterpret_cast<void*>(0x01591318), sizeof(void*), sunset::utils::Perm::ExecuteReadWrite);
-		*reinterpret_cast<void**>(0x01591318) = RandHook;
-#endif
 		// Fixes an issue where the game would not correctly handle the `FlashMovieMultiInputEnabled` flash function.
 		sunset::utils::set_permission(reinterpret_cast<void*>(0x0116A31B), 1, sunset::utils::Perm::ExecuteReadWrite);
 		*reinterpret_cast<std::uint8_t*>(0x0116A31B) = 1;
@@ -1508,7 +2027,7 @@ extern "C" void __stdcall Pentane_Main() {
 
 		// Effectively removes the weird FOV scaling by setting the constant to 1.0f.
 		sunset::utils::set_permission(reinterpret_cast<void*>(0x015f21cc), 4, sunset::utils::Perm::ReadWrite);
-		*reinterpret_cast<std::uint32_t*>(0x015f21cc) = 0x3F800000;
+		*reinterpret_cast<std::uint32_t*>(0x015f21cc) = std::bit_cast<std::uint32_t, float>(1.0f);
 
 		// Allows the game to choose the correct screen type value for CarTypeProperties.
 		GetTypeCCI::install_at_ptr(0x0048b4b9);
@@ -1525,9 +2044,6 @@ extern "C" void __stdcall Pentane_Main() {
 		// Fixes UI scaling at resolutions higher than 720p.
 		AdjustScaleformViewport::install_at_ptr(0x0116e28e);
 
-		// Inverts backwards-driving controls for player-controlled cars.
-		CarsVehicleSetSteer::install_at_ptr(0x006b10a0);
-
 		// Fixes an issue where the game thinks two players are active by default.
 		sunset::inst::push_u8(reinterpret_cast<void*>(0x004c5c17), 1);
 
@@ -1536,18 +2052,118 @@ extern "C" void __stdcall Pentane_Main() {
 		MiniMenuShowTite::install_at_ptr(0x004b89a0);
 		MiniMenuResetButtons::install_at_ptr(0x004b88b0);
 
+		// Prevents the game from removing the last mini-menu button on entering `MT_FrontEnd`.
 		sunset::inst::nop(reinterpret_cast<void*>(0x004c179e), 5);
 
-		sunset::utils::set_permission(reinterpret_cast<void*>(0x004c2a1f + 6), 1, sunset::utils::Perm::ExecuteReadWrite);
-		*reinterpret_cast<unsigned char*>(0x004c2a1f + 6) = CarsFrontEndScreen::SaveSlots;
-
+		// Replaces `TEMP_UNLOCK_BUTTONS`/`TEMP_UNLOCK_ALL` with `FrontEnd_NewGameButton`/`FrontEnd_New_Title`.
 		static const char FRONTEND_NEW_GAME_BUTTON[] = "FrontEnd_NewGameButton";
 		static const char FRONTEND_NEW_TITLE[] = "FrontEnd_New_Title";
+		sunset::utils::set_permission(reinterpret_cast<void*>(0x004c2a1f + 6), 1, sunset::utils::Perm::ExecuteReadWrite);
+		*reinterpret_cast<unsigned char*>(0x004c2a1f + 6) = std::to_underlying(CarsFrontEndScreen::SaveSlots);
 		sunset::inst::push_u32(reinterpret_cast<void*>(0x004c2a28), reinterpret_cast<std::uintptr_t>(&FRONTEND_NEW_TITLE));
 		sunset::inst::push_u32(reinterpret_cast<void*>(0x004c2a2d), reinterpret_cast<std::uintptr_t>(&FRONTEND_NEW_GAME_BUTTON));
 
+		// Adds the default mini-menu buttons on initialization.
 		AddButtons::install_at_ptr(0x004b86aa);
+
+		// Removes the last mini-menu button as the game transitions from the `SaveSlots` screen to `MT_FrontEnd`
 		CarsFrontEnd_SetScreen::install_at_ptr(0x004c1440);
+
+		// Fixes an issue where the `Progress` and `JoinIn` FrontEnd components would dissappear at the wrong times.
+		sunset::utils::set_permission(reinterpret_cast<void*>(0x004c14a1 + 3), 1, sunset::utils::Perm::ExecuteReadWrite);
+		*reinterpret_cast<unsigned char*>(0x004c14a1 + 3) = 1;
+		sunset::utils::set_permission(reinterpret_cast<void*>(0x004c14a5 + 3), 1, sunset::utils::Perm::ExecuteReadWrite);
+		*reinterpret_cast<unsigned char*>(0x004c14a5 + 3) = 1;
+
+		// Exposes engine support for more `VertexFormatType` values. 
+		RendererConvertTo::install_at_ptr(0x00829520);
+
+		// Prevents the game from adding the `Scn_Download` button to the mini-menu while hovering over DLC characters in the Garage.
+		sunset::inst::nop(reinterpret_cast<void*>(0x004ccd93), 10);
+		sunset::inst::nop(reinterpret_cast<void*>(0x004ccda3), 5);
+
+		// Scales the Picture-In-Picture textures depending on the current resolution.
+		SetPIPWidth::install_at_ptr(0x004ecfca);
+		SetPIPHeight::install_at_ptr(0x004ecff5);
+
+		// Sets the resolution of runtime shadow-map textures to their user-configured values.
+		SetShadowResolution::install_at_ptr(0x0062ec0d);
+		SetEnableHiResShadows::install_at_ptr(0x006336ef);
+		SetEnableHiResShadows2::install_at_ptr(0x0062ed05);
+
+		// Allows the user to toggle on/off Motion Blur.
+		SetMotionBlurHook::install_at_ptr(0x0062b868);
+		
+		// Fixes an issue where certain stats would not track in the global `ChallengeManager` database.
+		FixChallengeManagerUnk::install_at_ptr(0x00530af0);
+		
+		install_multiplayer_hooks();
+
+		// Prevent the game from pseudo-pausing when the ALT key is pressed.
+		sunset::inst::nop(reinterpret_cast<void*>(0x00833279), 0x12);
+
+		// Restores the default lap count from 1 -> 3.
+		sunset::inst::nop(reinterpret_cast<void*>(0x004e8382), 6);
+		sunset::inst::nop(reinterpret_cast<void*>(0x004e838e), 6);
+		sunset::utils::set_permission(reinterpret_cast<void*>(0x004e6b13 + 6), sizeof(std::uint32_t), sunset::utils::Perm::ExecuteReadWrite);
+		*reinterpret_cast<std::uint32_t*>(0x004e6b13 + 6) = 3;
+		sunset::utils::set_permission(reinterpret_cast<void*>(0x004e6b20 + 6), sizeof(std::uint32_t), sunset::utils::Perm::ExecuteReadWrite);
+		*reinterpret_cast<std::uint32_t*>(0x004e6b20 + 6) = 3;
+		
+		// Stub QR code rendering logic in `r_execute` to fix an issue where the Language Select menu wouldn't render.
+		sunset::inst::nop(reinterpret_cast<void*>(0x00872fc3), 5);
+
+		// Re-enables the Language Select menu.
+		sunset::inst::nop(reinterpret_cast<void*>(0x00eb38bf), 2);
+
+		// Fixes an issue where all Light-class cars would be forced to Medium.
+		sunset::inst::nop(reinterpret_cast<void*>(0x004dc9d8), 5);
+
+		// Fixes an issue where all car masses would be clamped to 400.0.
+		sunset::inst::nop(reinterpret_cast<void*>(0x004dca1c), 8);
+
+		// Fixes an issue where tire widths would be clamped to 0.3.
+		sunset::inst::nop(reinterpret_cast<void*>(0x004dca89), 8);
+		sunset::inst::nop(reinterpret_cast<void*>(0x004dcaaa), 8);
+
+		// SkateJack reticule fix at higher/lower resolutions than 1280x720. (alongside aspect ratio)
+		HudSkateReticuleHook::install_at_ptr(0x00534890);
+
+		// Inverts the steering input when backwards-driving.
+		BackwardSteeringInvert::install_at_ptr(0x006a4e30);
+		sunset::inst::nop(reinterpret_cast<void*>(0x006b0af3), 2);
+
+		// Swaps the leaning and eye animations during backwards-driving.
+		FixBwdEyeL::install_at_ptr(0x006a56d2);
+		FixBwdEyeR::install_at_ptr(0x006a571a);
+		FixBwdLean::install_at_ptr(0x006a5793);
+
+		DisplayWeaponTutorialHook::install_at_ptr(0x005c1a30);
+		MiniMenuSwapFirstButton::install_at_ptr(0x004b8830);
+		FixFireButtonUI::install_at_ptr(0x005ada9b);
+		FixRevItButtonUI::install_at_ptr(0x005451a9);
+		FixHudTutorialButtonPrompt::install_at_ptr(0x00538ddb);
+		sunset::inst::nop(reinterpret_cast<void*>(0x004cd5ae), 0xD);
+		FixAutoDriftButtonUI::install_at_ptr(0x004cd5ae);
+		FixLoadTipUI::install_at_ptr(0x00559e96);
+
+		// Forces the game to always use `ui/controllerbuttons.oct` instead of switching to `ui/tutorialbuttons.oct`.
+		sunset::utils::set_permission(reinterpret_cast<void*>(0x00551663), 1, sunset::utils::Perm::ExecuteReadWrite);
+		*reinterpret_cast<std::uint8_t*>(0x00551663) = 0xEB;
+
+		// Fixes an issue where `ControllerFocusManager::GetCurrent` would always return nullptr, and thus allows the game to update control mappers.
+		// Allows us to change UI binds on the fly in `FlashControlMapper::Update`. Has the unintended side effected of making menu navigation slow again. Will not be fixing this unless bluedragon does it for me.
+		sunset::utils::set_permission(reinterpret_cast<void*>(0x008115fc), 1, sunset::utils::Perm::ExecuteReadWrite);
+		*reinterpret_cast<std::uint8_t*>(0x008115fc) = 0x7E;
+
+		FlashControlMapperUpdateHook::install_at_ptr(0x01164190);
+		FlashInputActionMapHook::install_at_ptr(0x0116c4ce);
+		CCMSetPlayerID::install_at_ptr(0x00661140);
+		FlashToDevonHook::install_at_ptr(0x0116af20);
+		CarsFrontEnd_ShowControllerPull_HandleMessage::install_at_ptr(0x004c5c50);
+		ErrorPopup_HideControllerPullMessage_HandleMessage::install_at_ptr(0x00e9fef0);
+
+		install_fmv_driver();
 
 		logger::log("[ArcadeEssentials::Pentane_Main] Installed hooks!");
 	} 

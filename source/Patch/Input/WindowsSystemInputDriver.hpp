@@ -1,14 +1,12 @@
 #pragma once
+#include <optional>
 #include <dinput.h>
 #include "../../Game/Input/SystemInputDriver.hpp"
+#include "../../Game/Genie/String.hpp"
 
 inline class WindowsSystemInputDriver** g_InputPtr = reinterpret_cast<class WindowsSystemInputDriver**>(0x018d3244);
 
-//inline auto WindowsSystemInputDriver_LockPlayerToController = (void(__thiscall*)(class WindowsSystemInputDriver*, int, int))(0x00816dd0);
-//inline auto WindowsSystemInputDriver_ControllerLocked = (bool(__thiscall*)(class WindowsSystemInputDriver*, int))(0x00816ea0);
-//inline auto WindowsSystemInputDriver_IsControllerLocked = (bool(__thiscall*)(class WindowsSystemInputDriver*, int))(0x00816ed0);
-//inline auto WindowsSystemInputDriver_GetUnlockedController = (void* (__thiscall*)(class WindowsSystemInputDriver*, int))(0x00817050);
-
+constexpr auto MAX_CONTROLLERS = 11;
 
 class WindowsSystemInputDriver : public SystemInputDriver {
 public:
@@ -23,11 +21,27 @@ public:
 	ControllerInputDriver* d_pKeyboard;
 	ControllerInputDriver* d_pSpaceBall;
 	int controllers;
-	ControllerInputDriver* controller[11];
-	int lockedControllerIndex[11];
+	ControllerInputDriver* controller[MAX_CONTROLLERS];
+	int lockedControllerIndex[MAX_CONTROLLERS];
 	int numLockedControllers;
 public:
+	std::optional<int> FindKBM();
+	std::optional<int> FindFirstAvailableControllerSlot();
+	void SwapControllers(int i, int j);
+
 	bool Initialize(HINSTANCE hInst, HWND hWnd);
+	void BeginInputHook();
+};
+
+struct ShowControllerPullPacket {
+	Genie::String popupMessage;
+	bool unknown;
+	int playerIndex;
+	int type;
+};
+
+struct HideControllerPullPacket {
+	int playerIndex;
 };
 
 static_assert(sizeof(WindowsSystemInputDriver) == 1120);

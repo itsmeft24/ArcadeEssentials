@@ -13,5 +13,31 @@ public:
 		CMessageDispatcher_SendMessageToActor(this, name, data, sender, actor);
 	}
 };
+class CMessagePair;
+
+class CMessageOwner {
+private:
+	CMessagePair* m_pairHead;
+	bool m_isMaster;
+	unsigned int m_sessionID;
+};
+
+class CMessageHandler {
+private:
+	CMessagePair* m_pair;
+	CMessageHandler* m_next;
+	unsigned int m_rules;
+	bool m_deleteWhenDefunct;
+public:
+	virtual ~CMessageHandler();
+	virtual void Terminate();
+	virtual void HandleMessage(void* data, ActorHandle sender, bool posted);
+	virtual void HandleMessage(void* data, ActorHandle sender, bool posted, const char* messageName);
+};
+
+template <typename T> struct GenericMessageHandler : public CMessageHandler {
+public:
+	T* m_reference;
+};
 
 inline CMessageDispatcher** g_MessageDispatcher = reinterpret_cast<CMessageDispatcher**>(0x01926ef0);

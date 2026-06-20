@@ -12,6 +12,12 @@
 inline auto ActiveMoves_SendSideBashMunitionImpact = (void(__thiscall*)(class ActiveMoves*, ActorHandle))(0x006fac50);
 inline auto ActiveMoves_SetTwoWheelingLeft = (void(__thiscall*)(class ActiveMoves*, bool))(0x006f9aa0);
 inline auto ActiveMoves_SetTwoWheelingRight = (void(__thiscall*)(class ActiveMoves*, bool))(0x006f9be0);
+inline auto ActiveMoves_SetSideSteppingLeft = (void(__thiscall*)(class ActiveMoves*, bool))(0x006f9d20);
+inline auto ActiveMoves_SetSideSteppingRight = (void(__thiscall*)(class ActiveMoves*, bool))(0x006f9ee0);
+inline auto ActiveMoves_SetDriftingLeft = (void(__thiscall*)(class ActiveMoves*, bool, bool))(0x006fa880);
+inline auto ActiveMoves_SetDriftingRight = (void(__thiscall*)(class ActiveMoves*, bool, bool))(0x006faa50);
+inline auto ActiveMoves_SetBackwardsDriving = (void(__thiscall*)(class ActiveMoves*, bool))(0x006fa090);
+inline auto ActiveMoves_SetBunnyHopping = (void(__thiscall*)(class ActiveMoves*, bool, bool))(0x006f9860);
 
 class ActiveMoves : public CActorComponent {
 public: 
@@ -256,6 +262,24 @@ public:
 	}
 	inline void SetTwoWheelingRight(bool two_wheeling_right) {
 		ActiveMoves_SetTwoWheelingRight(this, two_wheeling_right);
+	}
+	inline void SetBackwardsDriving(bool bwd) {
+		ActiveMoves_SetBackwardsDriving(this, bwd);
+	}
+	inline void SetSideSteppingLeft(bool ssl) {
+		ActiveMoves_SetSideSteppingLeft(this, ssl);
+	}
+	inline void SetSideSteppingRight(bool ssr) {
+		ActiveMoves_SetSideSteppingRight(this, ssr);
+	}
+	inline void SetDriftingLeft(bool drl, bool autoDrift) {
+		ActiveMoves_SetDriftingLeft(this, drl, autoDrift);
+	}
+	inline void SetDriftingRight(bool drr, bool autoDrift) {
+		ActiveMoves_SetDriftingRight(this, drr, autoDrift);
+	}
+	inline void SetBunnyHopping(bool bh, bool forceHop) {
+		ActiveMoves_SetBunnyHopping(this, bh, forceHop);
 	}
 };
 

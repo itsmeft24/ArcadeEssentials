@@ -2,7 +2,13 @@
   "dependencies": [
     "zydis",
     "detours",
-	"tomlplusplus"
+    "tomlplusplus",
+    {
+      "name": "sdl3",
+      "features": [
+        "libusb"
+      ]
+    }
   ],
-  "builtin-baseline": "7354f1c8a0a276072e8d73d7eb6df6ca0ce8ccb1"
+  "builtin-baseline": "216bb6975d5cccd35c27a14fb39acec3ae0e8285"
 }

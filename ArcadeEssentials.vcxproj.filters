@@ -38,11 +38,41 @@
     <Filter Include="Source\Patch\Input">
       <UniqueIdentifier>{d5338d8b-d4ad-402d-8900-f89e4ce9efd7}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\Patch\Private">
-      <UniqueIdentifier>{b90dfcd3-4138-472c-bebb-5388cdbb9db4}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source\Game\Scaleform">
       <UniqueIdentifier>{bde36330-8011-41e4-898e-fa359a6f13d0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Patch\Debug">
+      <UniqueIdentifier>{7347c4d4-fed9-415d-94e2-4f5fe418ebae}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Game\Renderer">
+      <UniqueIdentifier>{fe7089f0-7467-4757-b696-c55b3782f4c4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Game\FrontEnd">
+      <UniqueIdentifier>{fb19d46f-fa04-49cf-b878-25d7b9ae1e54}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Game\GamePlay">
+      <UniqueIdentifier>{b6339dab-ea43-4376-9329-4c159e9b659a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Game\GamePlay\Race">
+      <UniqueIdentifier>{efe3f9ba-14f5-470f-98e3-207deda23878}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Game\Scaleform\Wrapper">
+      <UniqueIdentifier>{2eb63a9a-dbad-4211-97a7-33f1813bd554}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Axel">
+      <UniqueIdentifier>{8e66cd5d-f645-4877-ba3e-e8473e712a0d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Game\Hud">
+      <UniqueIdentifier>{268adbe8-9937-43e9-bde2-42b83ab677f7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Game\GamePlay\Missions">
+      <UniqueIdentifier>{ae563cc9-4106-4f79-b1f6-c79287aad321}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Game\FMV">
+      <UniqueIdentifier>{d60bcfdb-402f-492d-9af9-c18ccc667ebe}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Patch\FMV">
+      <UniqueIdentifier>{4811fa8f-4f6d-4bd2-861e-a73cabe0e216}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -73,26 +103,26 @@
     <ClCompile Include="source\main.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="source\Patch\Input\WindowsControllerInputDriver.cpp">
-      <Filter>Source\Patch\Input</Filter>
-    </ClCompile>
-    <ClCompile Include="source\Patch\Input\GameCubeAdapter.cpp">
-      <Filter>Source\Patch\Input</Filter>
-    </ClCompile>
-    <ClCompile Include="source\Patch\Input\GameCubeInputDriver.cpp">
-      <Filter>Source\Patch\Input</Filter>
-    </ClCompile>
     <ClCompile Include="source\Patch\Input\KeyControllerInputDriver.cpp">
-      <Filter>Source\Patch\Input</Filter>
-    </ClCompile>
-    <ClCompile Include="source\Patch\Input\XInputInputDriver.cpp">
       <Filter>Source\Patch\Input</Filter>
     </ClCompile>
     <ClCompile Include="source\Patch\Input\ControllerInputDriver.cpp">
       <Filter>Source\Patch\Input</Filter>
     </ClCompile>
-    <ClCompile Include="source\Patch\Input\VirtualController.cpp">
+    <ClCompile Include="source\Patch\MultiPlayer.cpp">
+      <Filter>Source\Patch</Filter>
+    </ClCompile>
+    <ClCompile Include="source\Patch\Debug\CMessageLogging.cpp">
+      <Filter>Source\Patch\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="source\Patch\Input\SDL3ControllerDriver.cpp">
       <Filter>Source\Patch\Input</Filter>
+    </ClCompile>
+    <ClCompile Include="source\Game\Input\ControlMapper.cpp">
+      <Filter>Source\Game\Input</Filter>
+    </ClCompile>
+    <ClCompile Include="source\Patch\FMV\Driver.cpp">
+      <Filter>Source\Patch\FMV</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -201,43 +231,133 @@
     <ClInclude Include="source\Game\Utils\Vector2.hpp">
       <Filter>Source\Game\Utils</Filter>
     </ClInclude>
-    <ClInclude Include="source\Patch\Input\WindowsControllerInputDriver.hpp">
-      <Filter>Source\Patch\Input</Filter>
-    </ClInclude>
-    <ClInclude Include="source\Patch\Input\GameCubeInputDriver.hpp">
-      <Filter>Source\Patch\Input</Filter>
-    </ClInclude>
-    <ClInclude Include="source\Patch\Input\GameCubeAdapter.hpp">
-      <Filter>Source\Patch\Input</Filter>
-    </ClInclude>
     <ClInclude Include="source\Patch\Input\KeyControllerInputDriver.hpp">
-      <Filter>Source\Patch\Input</Filter>
-    </ClInclude>
-    <ClInclude Include="source\Patch\Input\XInputInputDriver.hpp">
       <Filter>Source\Patch\Input</Filter>
     </ClInclude>
     <ClInclude Include="source\Patch\Input\ControllerInputDriver.hpp">
       <Filter>Source\Patch\Input</Filter>
     </ClInclude>
-    <ClInclude Include="source\Patch\Input\VirtualController.hpp">
-      <Filter>Source\Patch\Input</Filter>
-    </ClInclude>
     <ClInclude Include="source\Game\Genie\List.hpp">
       <Filter>Source\Game\Genie</Filter>
     </ClInclude>
-    <ClInclude Include="source\Game\Scaleform\Value.hpp">
+    <ClInclude Include="source\Game\Scaleform\GFxValue.hpp">
       <Filter>Source\Game\Scaleform</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Patch\MultiPlayer.hpp">
+      <Filter>Source\Patch</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Patch\Debug\CMessageLogging.hpp">
+      <Filter>Source\Patch\Debug</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Game\MiscOffsets.hpp">
+      <Filter>Source\Game</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Game\Renderer\DataTypes.hpp">
+      <Filter>Source\Game\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Game\FrontEnd\CarsFrontEnd.hpp">
+      <Filter>Source\Game\FrontEnd</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Game\Renderer\SceneNode.hpp">
+      <Filter>Source\Game\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Game\Renderer\CullableNode.hpp">
+      <Filter>Source\Game\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Game\Renderer\SubGeometryNode.hpp">
+      <Filter>Source\Game\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Game\GamePlay\Race\RaceManager.hpp">
+      <Filter>Source\Game\GamePlay\Race</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Game\GamePlay\GameStats.hpp">
+      <Filter>Source\Game\GamePlay</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Game\Scaleform\Wrapper\Movie.hpp">
+      <Filter>Source\Game\Scaleform\Wrapper</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Game\Scaleform\Wrapper\Gui.hpp">
+      <Filter>Source\Game\Scaleform\Wrapper</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Game\Scaleform\GFxMovieView.hpp">
+      <Filter>Source\Game\Scaleform</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Game\Scaleform\GFxMovieDef.hpp">
+      <Filter>Source\Game\Scaleform</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Axel\AxelContext.hpp">
+      <Filter>Source\Axel</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Axel\Axel.hpp">
+      <Filter>Source\Axel</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Axel\SteamNet.hpp">
+      <Filter>Source\Axel</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Axel\TSQueue.hpp">
+      <Filter>Source\Axel</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Axel\AxelMessage.hpp">
+      <Filter>Source\Axel</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Axel\AxelMessageTypes.hpp">
+      <Filter>Source\Axel</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Axel\AxelVehicleState.hpp">
+      <Filter>Source\Axel</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Game\Genie\Array.hpp">
+      <Filter>Source\Game\Genie</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Game\Hud\CarsHud.hpp">
+      <Filter>Source\Game\Hud</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Game\FMV\Player.hpp">
+      <Filter>Source\Game\FMV</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Game\FMV\Subtitles.hpp">
+      <Filter>Source\Game\FMV</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Game\Renderer\Texture.hpp">
+      <Filter>Source\Game\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Game\Renderer\Material.hpp">
+      <Filter>Source\Game\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Patch\Input\SDL3ControllerDriver.hpp">
+      <Filter>Source\Patch\Input</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Game\Components\CarsWeaponInventory.hpp">
+      <Filter>Source\Game\Components</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Game\FMV\Driver.hpp">
+      <Filter>Source\Game\FMV</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Game\Input\ControlMapper.hpp">
+      <Filter>Source\Game\Input</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Game\Scaleform\Wrapper\FlashControlMapper.hpp">
+      <Filter>Source\Game\Scaleform\Wrapper</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Game\Scaleform\Wrapper\Layer.hpp">
+      <Filter>Source\Game\Scaleform\Wrapper</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Patch\FMV\Driver.hpp">
+      <Filter>Source\Patch\FMV</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Game\AudioEventManager.hpp">
+      <Filter>Source\Game</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Game\Renderer\Context.hpp">
+      <Filter>Source\Game\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Game\Renderer\Driver.hpp">
+      <Filter>Source\Game\Renderer</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="plugin.def">
       <Filter>Source</Filter>
-    </None>
-    <None Include="source\Patch\Private\Testing.inl">
-      <Filter>Source\Patch\Private</Filter>
-    </None>
-    <None Include="source\Patch\Private\MessageLogging.inl">
-      <Filter>Source\Patch\Private</Filter>
     </None>
   </ItemGroup>
 </Project>

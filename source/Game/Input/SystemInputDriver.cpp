@@ -121,6 +121,6 @@ int SystemInputDriver::GetFirstUnlockedPlayer() {
 	return -1;
 }
 
-int SystemInputDriver::GetPlayerIndex(unsigned int controllerNum) {
+int SystemInputDriver::GetPlayerIndex(ControllerInputDriver* controller) {
 	return -1;
 }

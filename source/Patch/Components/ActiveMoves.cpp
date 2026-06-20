@@ -11,8 +11,7 @@
 #include "../../Game/CarsAIManager.hpp"
 #include "../../Game/Avatar.hpp"
 #include "../../Game/CarsCamManager.hpp"
-
-inline auto CarsHud_TrickCallout = (void(__thiscall*)(std::uintptr_t, CActor*, const char*, const char*, std::uint32_t))(0x00552c40);
+#include "../../Game/Hud/CarsHud.hpp"
 
 bool _fastcall TriggerSideBashReactions(ActiveMoves* _this, std::uintptr_t edx, ActorHandle victim, bool bashTie) {
 	CActor* victimPtr = CActor::FromHandle(victim);
@@ -87,7 +86,7 @@ bool _fastcall TriggerSideBashReactions(ActiveMoves* _this, std::uintptr_t edx, 
 		else if (victimWas2WDorBWD) {
 			(*g_MessageDispatcher)->SendMessageToActor("ForceWipeout", 0, victim, victim);
 		}
-		CarsHud_TrickCallout(*reinterpret_cast<std::uintptr_t*>(0x0192b8b4), _this->actor, "Battery", "CallOut_Side_Bash", 1);
+		(*g_CarsHud)->TrickCallout(_this->actor, "Battery", "CallOut_Side_Bash", 1);
 	}
 
 	uint32_t myCarId = (*g_CarManager)->GetCarId(_this->GetActor().GetHandle());

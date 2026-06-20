@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="packages\Microsoft.Windows.CppWinRT.2.0.220531.1\build\native\Microsoft.Windows.CppWinRT.props" Condition="Exists('packages\Microsoft.Windows.CppWinRT.2.0.220531.1\build\native\Microsoft.Windows.CppWinRT.props')" />
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
       <Configuration>Debug</Configuration>
@@ -17,18 +18,19 @@
     <RootNamespace>ArcadeEssentials</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
     <ProjectName>ArcadeEssentials</ProjectName>
+    <UseAxelStrategy>false</UseAxelStrategy>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v145</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v145</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
@@ -45,16 +47,18 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <OutDir>C:\Projects\OctaneEngine\C2A\Pentane\Plugins</OutDir>
+    <OutDir>C:\Projects\OctaneEngine\Cars2\C2A\Pentane\Plugins</OutDir>
     <TargetName>$(ProjectName)</TargetName>
     <TargetExt>.dll</TargetExt>
-    <IncludePath>.\dependencies\sunset\cpp;$(IncludePath)</IncludePath>
+    <IncludePath>.\dependencies\sunset\cpp;.\dependencies\steam\include;$(IncludePath)</IncludePath>
+    <LibraryPath>.\dependencies\steam\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <OutDir>C:\Projects\OctaneEngine\C2A\Pentane\Plugins</OutDir>
+    <OutDir>C:\Projects\OctaneEngine\Cars2\C2A\Pentane\Plugins</OutDir>
     <TargetName>$(ProjectName)</TargetName>
     <TargetExt>.dll</TargetExt>
-    <IncludePath>.\dependencies\sunset\cpp;$(IncludePath)</IncludePath>
+    <IncludePath>.\dependencies\sunset\cpp;.\dependencies\steam\include;$(IncludePath)</IncludePath>
+    <LibraryPath>.\dependencies\steam\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Label="Vcpkg" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <VcpkgUseStatic>true</VcpkgUseStatic>
@@ -73,16 +77,18 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <ShowIncludes>false</ShowIncludes>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <ModuleDefinitionFile>plugin.def</ModuleDefinitionFile>
       <GenerateMapFile>true</GenerateMapFile>
-      <AdditionalDependencies>Dinput8.lib;WinUSB.lib;d3d9.lib;Dwmapi.lib;OneCoreUAP.lib;Xinput.lib;Shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>WinUSB.lib;d3d9.lib;Dwmapi.lib;OneCoreUAP.lib;Shlwapi.lib;Imm32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy "C:\Projects\OctaneEngine\C2A\Pentane\Plugins\ArcadeEssentials.dll" "C:\Projects\OctaneEngine\Cars2PC-Allinol\Pentane\Plugins\ArcadeEssentials.dll*" /Y</Command>
+      <Command>
+      </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -95,6 +101,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <ShowIncludes>false</ShowIncludes>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -102,32 +109,52 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <ModuleDefinitionFile>plugin.def</ModuleDefinitionFile>
-      <AdditionalDependencies>Dinput8.lib;WinUSB.lib;d3d9.lib;Dwmapi.lib;OneCoreUAP.lib;Xinput.lib;Shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>WinUSB.lib;d3d9.lib;Dwmapi.lib;OneCoreUAP.lib;Shlwapi.lib;Imm32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy "C:\Projects\OctaneEngine\C2A\Pentane\Plugins\ArcadeEssentials.dll" "C:\Projects\OctaneEngine\Cars2PC-Allinol\Pentane\Plugins\ArcadeEssentials.dll*" /Y</Command>
+      <Command>
+      </Command>
     </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(UseAxelStrategy)'=='true'">
+    <ClCompile>
+      <PreprocessorDefinitions>MP_STRATEGY_AXEL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="dependencies\sunset\cpp\sunset.cpp" />
+    <ClCompile Include="source\Axel\AxelContext.cpp" Condition="'$(UseAxelStrategy)'=='true'" />
+    <ClCompile Include="source\Axel\AxelInGame.cpp" Condition="'$(UseAxelStrategy)'=='true'" />
+    <ClCompile Include="source\Axel\AxelMessage.cpp" Condition="'$(UseAxelStrategy)'=='true'" />
+    <ClCompile Include="source\Axel\AxelUI.cpp" Condition="'$(UseAxelStrategy)'=='true'" />
+    <ClCompile Include="source\Axel\SteamNet.cpp" Condition="'$(UseAxelStrategy)'=='true'" />
     <ClCompile Include="source\config.cpp" />
+    <ClCompile Include="source\Game\Input\ControlMapper.cpp" />
+    <ClCompile Include="source\Patch\Debug\CMessageLogging.cpp" />
+    <ClCompile Include="source\Patch\FMV\Driver.cpp" />
     <ClCompile Include="source\Patch\Input\ControllerInputDriver.cpp" />
     <ClCompile Include="source\Patch\Input\KeyControllerInputDriver.cpp" />
     <ClCompile Include="source\Game\Input\SystemInputDriver.cpp" />
-    <ClCompile Include="source\Patch\Input\VirtualController.cpp" />
-    <ClCompile Include="source\Patch\Input\XInputInputDriver.cpp" />
+    <ClCompile Include="source\Patch\Input\SDL3ControllerDriver.cpp" />
     <ClCompile Include="source\main.cpp" />
     <ClCompile Include="source\Patch\Components\ActiveMoves.cpp" />
     <ClCompile Include="source\Patch\Components\CarsReactionMonitor.cpp" />
-    <ClCompile Include="source\Patch\Input\GameCubeAdapter.cpp" />
-    <ClCompile Include="source\Patch\Input\GameCubeInputDriver.cpp" />
-    <ClCompile Include="source\Patch\Input\WindowsControllerInputDriver.cpp" />
     <ClCompile Include="source\Patch\Input\WindowsSystemInputDriver.cpp" />
+    <ClCompile Include="source\Patch\MultiPlayer.cpp" />
     <ClCompile Include="source\Patch\OptionFlashCallbacks.cpp" />
     <ClCompile Include="source\pentane.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="source\Axel\AxelContext.hpp" />
+    <ClInclude Include="source\Axel\Axel.hpp" />
+    <ClInclude Include="source\Axel\AxelMessage.hpp" />
+    <ClInclude Include="source\Axel\AxelMessageTypes.hpp" />
+    <ClInclude Include="source\Axel\AxelVehicleState.hpp" />
+    <ClInclude Include="source\Axel\SteamNet.hpp" />
+    <ClInclude Include="source\Axel\TSQueue.hpp" />
     <ClInclude Include="source\config.hpp" />
+    <ClInclude Include="source\Game\AudioEventManager.hpp" />
     <ClInclude Include="source\Game\Avatar.hpp" />
     <ClInclude Include="source\Game\CActor.hpp" />
     <ClInclude Include="source\Game\CarManager.hpp" />
@@ -140,17 +167,43 @@
     <ClInclude Include="source\Game\Components\CarsReactionMonitor.hpp" />
     <ClInclude Include="source\Game\Components\CarsVehicle.hpp" />
     <ClInclude Include="source\Game\Components\CarsVehiclePlayer.hpp" />
+    <ClInclude Include="source\Game\Components\CarsWeaponInventory.hpp" />
     <ClInclude Include="source\Game\DynamicArray.hpp" />
+    <ClInclude Include="source\Game\FMV\Driver.hpp" />
+    <ClInclude Include="source\Game\FMV\Player.hpp" />
+    <ClInclude Include="source\Game\FMV\Subtitles.hpp" />
+    <ClInclude Include="source\Game\FrontEnd\CarsFrontEnd.hpp" />
+    <ClInclude Include="source\Game\GamePlay\GameStats.hpp" />
+    <ClInclude Include="source\Game\GamePlay\Race\RaceManager.hpp" />
     <ClInclude Include="source\Game\GameProgressionManager.hpp" />
     <ClInclude Include="source\Game\GameSpecificFlashImpl.hpp" />
+    <ClInclude Include="source\Game\Genie\Array.hpp" />
     <ClInclude Include="source\Game\Genie\List.hpp" />
     <ClInclude Include="source\Game\Genie\String.hpp" />
-    <ClInclude Include="source\Game\Scaleform\Value.hpp" />
+    <ClInclude Include="source\Game\Hud\CarsHud.hpp" />
+    <ClInclude Include="source\Game\Input\ControlMapper.hpp" />
+    <ClInclude Include="source\Game\MiscOffsets.hpp" />
+    <ClInclude Include="source\Game\Renderer\Context.hpp" />
+    <ClInclude Include="source\Game\Renderer\CullableNode.hpp" />
+    <ClInclude Include="source\Game\Renderer\DataTypes.hpp" />
+    <ClInclude Include="source\Game\Renderer\Driver.hpp" />
+    <ClInclude Include="source\Game\Renderer\Material.hpp" />
+    <ClInclude Include="source\Game\Renderer\SceneNode.hpp" />
+    <ClInclude Include="source\Game\Renderer\SubGeometryNode.hpp" />
+    <ClInclude Include="source\Game\Renderer\Texture.hpp" />
+    <ClInclude Include="source\Game\Scaleform\GFxMovieDef.hpp" />
+    <ClInclude Include="source\Game\Scaleform\GFxMovieView.hpp" />
+    <ClInclude Include="source\Game\Scaleform\GFxValue.hpp" />
+    <ClInclude Include="source\Game\Scaleform\Wrapper\FlashControlMapper.hpp" />
+    <ClInclude Include="source\Game\Scaleform\Wrapper\Gui.hpp" />
+    <ClInclude Include="source\Game\Scaleform\Wrapper\Layer.hpp" />
+    <ClInclude Include="source\Game\Scaleform\Wrapper\Movie.hpp" />
+    <ClInclude Include="source\Patch\Debug\CMessageLogging.hpp" />
+    <ClInclude Include="source\Patch\FMV\Driver.hpp" />
     <ClInclude Include="source\Patch\Input\ControllerInputDriver.hpp" />
     <ClInclude Include="source\Patch\Input\KeyControllerInputDriver.hpp" />
     <ClInclude Include="source\Game\Input\SystemInputDriver.hpp" />
-    <ClInclude Include="source\Patch\Input\VirtualController.hpp" />
-    <ClInclude Include="source\Patch\Input\XInputInputDriver.hpp" />
+    <ClInclude Include="source\Patch\Input\SDL3ControllerDriver.hpp" />
     <ClInclude Include="source\Game\Kernel.hpp" />
     <ClInclude Include="source\Game\Physics\RigidBody.hpp" />
     <ClInclude Include="source\Game\Renderer.hpp" />
@@ -165,17 +218,13 @@
     <ClInclude Include="source\Game\Utils\PIDController.hpp" />
     <ClInclude Include="source\Game\Utils\Vector2.hpp" />
     <ClInclude Include="source\Game\Utils\Vector3.hpp" />
-    <ClInclude Include="source\Patch\Input\GameCubeAdapter.hpp" />
-    <ClInclude Include="source\Patch\Input\GameCubeInputDriver.hpp" />
-    <ClInclude Include="source\Patch\Input\WindowsControllerInputDriver.hpp" />
     <ClInclude Include="source\Patch\Input\WindowsSystemInputDriver.hpp" />
+    <ClInclude Include="source\Patch\MultiPlayer.hpp" />
     <ClInclude Include="source\Patch\OptionFlashCallbacks.hpp" />
     <ClInclude Include="source\pentane.hpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="plugin.def" />
-    <None Include="source\Patch\Private\MessageLogging.inl" />
-    <None Include="source\Patch\Private\Testing.inl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -38,6 +38,7 @@ public:
 		char* dialogName;
 		char* dialogCode;
 	};
+
 	enum class CarClass : int {
 		Light = 0,
 		Medium = 1,
