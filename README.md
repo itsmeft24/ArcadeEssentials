@@ -1,5 +1,5 @@
 <p align="center">
-    <img src="https://raw.githubusercontent.com/itsmeft24/ArcadeEssentials-Private/refs/heads/main/assets/logo.svg" width="512"/>
+    <img src="https://raw.githubusercontent.com/itsmeft24/ArcadeEssentials/refs/heads/main/assets/logo.svg" width="1024"/>
 </p>
 
 ---
