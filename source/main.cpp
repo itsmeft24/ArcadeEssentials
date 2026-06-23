@@ -1809,7 +1809,8 @@ extern "C" void __stdcall Pentane_Main() {
 		sunset::inst::nop(reinterpret_cast<void*>(0x004bc4f3), 4);
 		sunset::inst::nop(reinterpret_cast<void*>(0x004bbbfe), 4);
 		sunset::inst::nop(reinterpret_cast<void*>(0x004bbd1f), 8);
-
+		sunset::inst::nop(reinterpret_cast<void*>(0x00456a36), 5); // BluedragonMask, added due to some people still seeing it.
+		
 		// Replaces a call to CMessageDispatcher::SendMessageToAll that shuts off the Globe for a call to CarsFrontEnd::SetScreen to allow the game to boot directly to the title screen.
 		sunset::inst::nop(reinterpret_cast<void*>(0x004ba81c), 19);
 		SetInitialScreenState::install_at_ptr(0x004ba81c);
