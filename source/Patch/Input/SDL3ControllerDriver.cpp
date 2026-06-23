@@ -108,11 +108,11 @@ void SDL3ControllerDriver::BeginInput() {
        Sint16 axisRX = SDL_GetGamepadAxis(m_gamepad, SDL_GAMEPAD_AXIS_RIGHTX);
        Sint16 axisRY = SDL_GetGamepadAxis(m_gamepad, SDL_GAMEPAD_AXIS_RIGHTY);
 
-       SetStick(m_transferLookup[std::to_underlying(AnalogAxis::X1)], 256, AnalogAxis::X1, (axisLX / 256) + 128);
-       SetStick(m_transferLookup[std::to_underlying(AnalogAxis::Y1)], 256, AnalogAxis::Y1, (-axisLY / 256) + 128);
+       SetStick(m_transferLookup[std::to_underlying(AnalogAxis::X1)], 256, AnalogAxis::X1, std::clamp((axisLX / 256) + 128, 0, 255));
+       SetStick(m_transferLookup[std::to_underlying(AnalogAxis::Y1)], 256, AnalogAxis::Y1, std::clamp((-axisLY / 256) + 128, 0, 255));
 
-       SetStick(m_transferLookup[std::to_underlying(AnalogAxis::X2)], 256, AnalogAxis::X2, (axisRX / 256) + 128);
-       SetStick(m_transferLookup[std::to_underlying(AnalogAxis::Y2)], 256, AnalogAxis::Y2, (-axisRY / 256) + 128);
+       SetStick(m_transferLookup[std::to_underlying(AnalogAxis::X2)], 256, AnalogAxis::X2, std::clamp((axisRX / 256) + 128, 0, 255));
+       SetStick(m_transferLookup[std::to_underlying(AnalogAxis::Y2)], 256, AnalogAxis::Y2, std::clamp((-axisRY / 256) + 128, 0, 255));
 
        SetStick(m_transferLookup[std::to_underlying(AnalogAxis::L2)], 256, AnalogAxis::L2, ((axisL2 >> 7) / 2) + 128);
        SetStick(m_transferLookup[std::to_underlying(AnalogAxis::R2)], 256, AnalogAxis::R2, ((axisR2 >> 7) / 2) + 128);
