@@ -24,7 +24,7 @@ inline auto resolve_shadow_quality(ShadowQuality quality) -> unsigned int {
 	case ShadowQuality::VeryHigh:
 		return 4096;
 	case ShadowQuality::Ultra:
-		return 8192;
+		return 5461;
 	}
 	return 1024;
 };
