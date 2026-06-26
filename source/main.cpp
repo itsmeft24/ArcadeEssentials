@@ -1908,8 +1908,11 @@ extern "C" void __stdcall Pentane_Main() {
 		// Restores the ability for cars to respond to being sidebashed.
 		SideBashHandler::install_at_ptr(0x006fac40);
 
-		// Allows the user to backwards-drive for as long as they want.
-		sunset::inst::nop(reinterpret_cast<void*>(0x006f73eb), 4);
+		// Allows the user to backwards-drive for as long as they want. (Modified by BluedragonMask, this implementation fixes the 1x flat spin auto correct bwd)
+		sunset::utils::set_permission(reinterpret_cast<void*>(0x006f7429), 6, sunset::utils::Perm::ExecuteReadWrite);
+		*reinterpret_cast<std::uint8_t*>(0x006f7429) = 0xEB;
+		*reinterpret_cast<std::uint8_t*>(0x006f742a) = 0x0E;
+		sunset::inst::nop(reinterpret_cast<void*>(0x006f742b), 4);
 		// Prevents RaceManager from trying to inject ControllerButton::Triangle presses in the input driver.
 		sunset::inst::nop(reinterpret_cast<void*>(0x004f3ecf), 2);
 		
