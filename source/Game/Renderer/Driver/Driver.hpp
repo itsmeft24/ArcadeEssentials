@@ -1,9 +1,10 @@
 #pragma once
 #include <Windows.h>
 #include <d3d9.h>
-#include "../Types.hpp"
+#include "../../Types.hpp"
 
 inline auto Renderer_DriverImpl_PumpMessages = (bool(__thiscall*)(void*))(0x00832990);
+inline auto Renderer_Driver_CleanupAfterRender = (void(__thiscall*)(void*))(0x00832480);
 
 namespace Renderer {
 	
@@ -57,7 +58,7 @@ namespace Renderer {
         unsigned int m_presentationInterval;
         bool m_supportsAnisotropicMagFilter;
         unsigned int m_maxSupportedAnisotropy;
-
+    public:
         inline bool PumpMessages() {
             return Renderer_DriverImpl_PumpMessages(this);
         }
@@ -79,6 +80,10 @@ namespace Renderer {
 		char* m_captureFileName;
 		bool m_exitRequested;
 		bool m_initialized;
+    public:
+        inline void CleanupAfterRender() {
+            Renderer_Driver_CleanupAfterRender(this);
+        }
 	};
 
 	inline auto g_Driver = reinterpret_cast<Driver**>(0x01906308);

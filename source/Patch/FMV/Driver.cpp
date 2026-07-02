@@ -1,22 +1,17 @@
 #include <sunset.hpp>
 
 #include "Driver.hpp"
-#include "../../Game/Renderer/Texture.hpp"
-#include "../../Game/Renderer/Material.hpp"
-#include "../../Game/Renderer/Context.hpp"
-#include "../../Game/Renderer/Driver.hpp"
+#include "../../Game/Renderer/Texture/Texture.hpp"
+#include "../../Game/Renderer/Material/Material.hpp"
+#include "../../Game/Renderer/Driver/Driver.hpp"
+#include "../../Game/Renderer/R_Render.hpp"
 #include "../../Game/Scaleform/Wrapper/Gui.hpp"
 #include "../../Game/Utils/Vector2.hpp"
 #include "../../Game/AudioEventManager.hpp"
 
-using R_SubmitJobsFn = void(_cdecl*)();
-
 inline auto Media_StreamExists = (bool(_cdecl*)(const char*))(0x007676a0);
-inline auto r_waitForRenderThread = (void(_cdecl*)())(0x008745b0);
-inline auto r_reset = (void(_cdecl*)())(0x00874440);
-inline auto r_renderFrame = (void(_cdecl*)())(0x008756e0);
-inline auto r_setSubmitJobsFn = (R_SubmitJobsFn(_cdecl*)(R_SubmitJobsFn))(0x00874110);
-inline auto _commit_bink_job = (R_SubmitJobsFn)(0x00cdb1c0);
+
+inline auto _commit_bink_job = (Renderer::R_SubmitJobsFn)(0x00cdb1c0);
 inline auto Good_sleep_us = (int(_cdecl*)(int))(0x00cdb0e0);
 
 inline Renderer::Material** s_BinkShader = reinterpret_cast<Renderer::Material**>(0x01925f34);
@@ -155,17 +150,17 @@ DefineReplacementHook(FMVDriverPlay) {
 		}
 		(*g_AudioEventManager)->Pause(true);
 
-		r_waitForRenderThread();
+		Renderer::r_waitForRenderThread();
 		Types::SmartPointer<Renderer::Material> binkShader = (*s_BinkShader)->Clone();
 		*s_BinkMaterial = binkShader.Get();
-		r_reset();
+		Renderer::r_reset();
 		/*
 		r_waitForRenderThread();
 		Renderer::Material::Clone(s_BinkShader, &local_140);
 		s_BinkMaterial = local_140;
 		r_reset();
 		*/
-		R_SubmitJobsFn oldSubmitFn = r_setSubmitJobsFn(_commit_bink_job);
+		Renderer::R_SubmitJobsFn oldSubmitFn = Renderer::r_setSubmitJobsFn(_commit_bink_job);
 
 		unsigned int isMultiThreaded = (*Renderer::r_context)->flags >> 1 & 1;
 		(*Renderer::r_context)->flags = (*Renderer::r_context)->flags & 0xfffffffd;
@@ -268,7 +263,7 @@ DefineReplacementHook(FMVDriverPlay) {
 					if (_this->A.Count() != 0) {
 						binkShader->SetTexture(_this->A[(_this->m_binkTextureSet).bink_buffers.FrameNum].Get(), "ATexture", 0);
 					}
-					r_renderFrame();
+					Renderer::r_renderFrame();
 					if (*reinterpret_cast<unsigned int*>(0x01925e60) == 0) {
 						(*BinkPause)(_this->m_hBink, 1);
 						while (*reinterpret_cast<unsigned int*>(0x01925e60) == 0) {
@@ -289,8 +284,8 @@ DefineReplacementHook(FMVDriverPlay) {
 				}
 			}
 		}
-		r_reset();
-		r_setSubmitJobsFn(oldSubmitFn);
+		Renderer::r_reset();
+		Renderer::r_setSubmitJobsFn(oldSubmitFn);
 		(*Renderer::r_context)->flags = (*Renderer::r_context)->flags & 0xfffffffd | (isMultiThreaded & 1) << 1;
 		_this->Y.Clear();
 		_this->Cb.Clear();

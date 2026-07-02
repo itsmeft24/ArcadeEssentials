@@ -1,7 +1,7 @@
 #pragma once
 #include "Subtitles.hpp"
 #include "../DynamicArray.hpp"
-#include "../Renderer/Texture.hpp"
+#include "../Renderer/Texture/Texture.hpp"
 #include <d3d9.h>
 
 inline auto FMV_Driver_CreateTextures = (bool(__thiscall*)(void*, void*))(0x00cdb360);

@@ -74,6 +74,18 @@
     <Filter Include="Source\Patch\FMV">
       <UniqueIdentifier>{4811fa8f-4f6d-4bd2-861e-a73cabe0e216}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Game\Renderer\SceneNodes">
+      <UniqueIdentifier>{451969bd-951b-45fe-9512-e36d4d5dc243}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Game\Renderer\Texture">
+      <UniqueIdentifier>{848a229e-7dc7-42a5-a27e-7769fbad72e6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Game\Renderer\Material">
+      <UniqueIdentifier>{40692b7a-b77b-4389-a12b-2da10b255eec}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Game\Renderer\Driver">
+      <UniqueIdentifier>{c6a89149-cf87-4a81-b299-64b971b039b3}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dependencies\sunset\cpp\sunset.cpp">
@@ -258,15 +270,6 @@
     <ClInclude Include="source\Game\FrontEnd\CarsFrontEnd.hpp">
       <Filter>Source\Game\FrontEnd</Filter>
     </ClInclude>
-    <ClInclude Include="source\Game\Renderer\SceneNode.hpp">
-      <Filter>Source\Game\Renderer</Filter>
-    </ClInclude>
-    <ClInclude Include="source\Game\Renderer\CullableNode.hpp">
-      <Filter>Source\Game\Renderer</Filter>
-    </ClInclude>
-    <ClInclude Include="source\Game\Renderer\SubGeometryNode.hpp">
-      <Filter>Source\Game\Renderer</Filter>
-    </ClInclude>
     <ClInclude Include="source\Game\GamePlay\Race\RaceManager.hpp">
       <Filter>Source\Game\GamePlay\Race</Filter>
     </ClInclude>
@@ -318,12 +321,6 @@
     <ClInclude Include="source\Game\FMV\Subtitles.hpp">
       <Filter>Source\Game\FMV</Filter>
     </ClInclude>
-    <ClInclude Include="source\Game\Renderer\Texture.hpp">
-      <Filter>Source\Game\Renderer</Filter>
-    </ClInclude>
-    <ClInclude Include="source\Game\Renderer\Material.hpp">
-      <Filter>Source\Game\Renderer</Filter>
-    </ClInclude>
     <ClInclude Include="source\Patch\Input\SDL3ControllerDriver.hpp">
       <Filter>Source\Patch\Input</Filter>
     </ClInclude>
@@ -348,10 +345,46 @@
     <ClInclude Include="source\Game\AudioEventManager.hpp">
       <Filter>Source\Game</Filter>
     </ClInclude>
-    <ClInclude Include="source\Game\Renderer\Context.hpp">
+    <ClInclude Include="source\Game\Renderer\R_Render.hpp">
       <Filter>Source\Game\Renderer</Filter>
     </ClInclude>
-    <ClInclude Include="source\Game\Renderer\Driver.hpp">
+    <ClInclude Include="source\Game\Renderer\R_Target.hpp">
+      <Filter>Source\Game\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Game\Renderer\C2_Render.hpp">
+      <Filter>Source\Game\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Game\Renderer\Material\Material.hpp">
+      <Filter>Source\Game\Renderer\Material</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Game\Renderer\Texture\Texture.hpp">
+      <Filter>Source\Game\Renderer\Texture</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Game\Renderer\SceneNodes\CullableNode.hpp">
+      <Filter>Source\Game\Renderer\SceneNodes</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Game\Renderer\SceneNodes\SceneNode.hpp">
+      <Filter>Source\Game\Renderer\SceneNodes</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Game\Renderer\SceneNodes\SubGeometryNode.hpp">
+      <Filter>Source\Game\Renderer\SceneNodes</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Game\Renderer\Driver\Driver.hpp">
+      <Filter>Source\Game\Renderer\Driver</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Game\Renderer\R_Buffer.hpp">
+      <Filter>Source\Game\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Game\Renderer\SceneNodes\CameraNode.hpp">
+      <Filter>Source\Game\Renderer\SceneNodes</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Game\Renderer\SceneNodes\ComponentNode.hpp">
+      <Filter>Source\Game\Renderer\SceneNodes</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Game\Renderer\SceneNodes\TransformNode.hpp">
+      <Filter>Source\Game\Renderer\SceneNodes</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Game\Renderer\R_Texture.hpp">
       <Filter>Source\Game\Renderer</Filter>
     </ClInclude>
   </ItemGroup>

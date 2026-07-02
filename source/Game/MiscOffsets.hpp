@@ -64,7 +64,6 @@ inline auto	CameraScene_SetActive = (void(__thiscall*)(void*, bool))(0x00b94350)
 inline auto	Players_CreatePlayerSceneDetails = (void(__thiscall*)(struct Players*, int))(0x00ebf560);
 inline auto	Players_SetAvatar = (void(__thiscall*)(struct Players*, int, void*))(0x00ec15e0);
 inline auto	Players_Player_SetAvatar = (void(__thiscall*)(struct Player*, void*))(0x00ec2110);
-inline auto	r_defaultTarget = (struct R_Target* (_cdecl*)())(0x0087bf70);
 
 inline auto	ChoreoTest_SetChoreo = (void(__thiscall*)(std::uintptr_t, int))(0x00b3f5f0);
 inline auto	CarsHud_FUN_00551c60 = (std::uint32_t(__thiscall*)(std::uintptr_t, int))(0x00551c60);

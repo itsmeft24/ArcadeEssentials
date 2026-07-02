@@ -1,6 +1,6 @@
 #pragma once
 #include <utility>
-#include "../../Game/Types.hpp"
+#include "../../../Game/Types.hpp"
 
 inline auto Renderer_Texture_Constructor = (void* (__thiscall*)(void*))(0x00868560);
 inline auto Renderer_Texture_Create = (void* (_cdecl*)(void*))(0x0086ba60);

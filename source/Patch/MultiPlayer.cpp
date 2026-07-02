@@ -2,6 +2,8 @@
 #include <sunset.hpp>
 #include <algorithm>
 #include "../Game/Genie/List.hpp"
+#include "../Game/Renderer/R_Render.hpp"
+#include "../Game/Renderer/R_Target.hpp"
 #include "../Game/Scaleform/GFxValue.hpp"
 #include "../Game/Stage/StageEntity.hpp"
 #include "../Game/CarManager.hpp"
@@ -18,24 +20,6 @@ std::uintptr_t __declspec(naked) return_address() {
 		ret
 	}
 }
-
-struct R_Viewport {
-	short x;
-	short y;
-	short w;
-	short h;
-	float zNear;
-	float zFar;
-	float aspectX;
-	float aspectY;
-};
-
-struct R_Target {
-	char padding[0x5c];
-	R_Viewport viewport;
-};
-
-static_assert(sizeof(R_Target) == 0x74);
 
 struct Player {
 	void* m_pScene;
@@ -549,8 +533,8 @@ DefineInlineHook(CreatePlayerHUDMovie) {
 		float xOffset = 0.0f;
 		float yOffset = 0.0f;
 
-		float mainW = r_defaultTarget()->viewport.w;
-		float mainH = r_defaultTarget()->viewport.h;
+		float mainW = Renderer::r_defaultTarget()->viewport.w;
+		float mainH = Renderer::r_defaultTarget()->viewport.h;
 
 		if (playerId != 0) {
 			if (playerCount == 2) {
