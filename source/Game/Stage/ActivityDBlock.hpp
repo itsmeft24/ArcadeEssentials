@@ -5,7 +5,7 @@
 class ActivityDBlock : public DBlock {
 public:
 	float d_maxUpdateSec;
-	uint_fast32_t d_involvement;
+	unsigned int d_involvement;
 	float d_fLifetime;
 	float d_shutdownDistance;
 	bool d_markedForDeath;

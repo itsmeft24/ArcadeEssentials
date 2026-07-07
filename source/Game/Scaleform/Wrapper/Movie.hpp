@@ -5,7 +5,8 @@
 #include "../GFxMovieView.hpp"
 
 namespace Flash {
-	struct Movie {
+	class Movie {
+	public:
 		CMessageOwner m_messageOowner;
 		Gui* m_owner;
 		GFxMovieDef* m_movieDef;

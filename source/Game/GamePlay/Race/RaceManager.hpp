@@ -1,5 +1,5 @@
 #pragma once
-#include "../../Stage/StageEntity.hpp"
+#include "../../Stage/Cars2VehicleDBlock.hpp"
 #include "../../Utils/Vector3.hpp"
 #include "../../Utils/Matrix.hpp"
 

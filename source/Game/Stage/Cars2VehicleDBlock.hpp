@@ -5,8 +5,6 @@
 #include "../Components/ActiveMoves.hpp"
 #include "../Components/CarsReactionMonitor.hpp"
 
-inline auto Cars2VehicleDBlock_Get = (void*(__thiscall*)(CActor*, int, int))(0x00e19820);
-
 namespace Animation {
 	class DataNode;
 };
@@ -51,7 +49,7 @@ public:
 	float m_closestCameraDistance;
 public:
 	inline static Cars2VehicleDBlock* Get(CActor& actor) {
-		return reinterpret_cast<Cars2VehicleDBlock*>(Cars2VehicleDBlock_Get(&actor, 0x13, -1));
+		return reinterpret_cast<Cars2VehicleDBlock*>(actor.GetDataBlock(DBlock::BlockType::Cars2Vehicle));
 	}
 };
 
