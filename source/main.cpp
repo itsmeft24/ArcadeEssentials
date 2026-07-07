@@ -370,9 +370,9 @@ DefineReplacementHook(OnConfirmHook) {
 				Genie::String unk4{}; // No idea what this is, seems to contain the same contents as `description_localization_label`.
 				float unk5 = 0.0f;
 				float unk6 = 0.0f;
-				UnkExcelDataBase_GetUnk(*reinterpret_cast<void**>(0x018ae110), &badge_id, &localization_label);
-				UnkExcelDataBase_GetUnk1(*reinterpret_cast<void**>(0x018ae110), &badge_id, &description_localization_label);
-				UnkExcelDataBase_GetUnk2(*reinterpret_cast<void**>(0x018ae110), &badge_id, &unk4, &unk5, &unk6);
+				GameStructureManager_GetUnk(*reinterpret_cast<void**>(0x018ae110), &badge_id, &localization_label);
+				GameStructureManager_GetUnk1(*reinterpret_cast<void**>(0x018ae110), &badge_id, &description_localization_label);
+				GameStructureManager_GetUnk2(*reinterpret_cast<void**>(0x018ae110), &badge_id, &unk4, &unk5, &unk6);
 				int local_94 = static_cast<int>(std::floor(static_cast<double>(unk5 * 10.0)));
 				int local_4c = static_cast<int>(std::fmod(static_cast<double>(local_94), 10.0));
 				if (unk5 < unk6) {
@@ -1759,7 +1759,7 @@ extern "C" void __stdcall Pentane_Main() {
 		if (!GLOBAL_CONFIG->enable_attract_fmvs) {
 			// Prevents the game from sending you to the attract videos at the title screen.
 			sunset::utils::set_permission(reinterpret_cast<void*>(0x004bc2c5), 1, sunset::utils::Perm::ExecuteReadWrite);
-			*reinterpret_cast<char*>(0x004bc2c5) = 0xEB;
+			*reinterpret_cast<unsigned char*>(0x004bc2c5) = 0xEB;
 		}
 		if (GLOBAL_CONFIG->enable_fast_nav) {
 			// Stubs the `SetButtonDealy` ExternalInterface function to enable unrestricted menu navigation speed.
