@@ -61,7 +61,7 @@ DefineReplacementHook(FillStartingGrid) {
 					}
 				}
 
-				char* modelName = UnkDatabaseExcel_GetModelNameForCarId(*g_UnkDatabaseExcel, evaluated);
+				char* modelName = GameStructureManager_GetModelNameForCarId(*g_GameStructureManager, evaluated);
 				_this->m_settings.m_startingCarId[axelId] = const_cast<char*>("PLAYER");
 				_this->m_settings.m_startingCarModelName[axelId] = modelName;
 				_this->m_settings.m_startingCarName[axelId] = evaluated;
@@ -373,7 +373,7 @@ DefineReplacementHook(CarsHudGetRaceClocks) {
 };
 
 DefineReplacementHook(CarsHudGetMPHud) {
-	static PlayerHud* _fastcall callback(CarsHud * _this, std::uintptr_t edx, std::int8_t index) {
+	static HudSplitScreen* _fastcall callback(CarsHud * _this, std::uintptr_t edx, std::int8_t index) {
 		if (index < 0 || index > 3) {
 			return nullptr;
 		}
