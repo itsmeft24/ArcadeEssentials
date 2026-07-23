@@ -22,8 +22,6 @@
 #include "Patch/Debug/CMessageLogging.hpp"
 #include "Patch/Input/KeyControllerInputDriver.hpp"
 #include "Patch/Input/WindowsSystemInputDriver.hpp"
-// #include "Patch/Input/WindowsControllerInputDriver.hpp"
-// #include "Patch/Input/XInputInputDriver.hpp"
 #include "Patch/MultiPlayer.hpp"
 #include "Patch/OptionFlashCallbacks.hpp"
 #include "Patch/FMV/Driver.hpp"

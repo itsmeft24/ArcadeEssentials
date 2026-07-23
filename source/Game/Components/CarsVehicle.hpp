@@ -1,6 +1,7 @@
 #pragma once
 #include "../Input/SystemInputDriver.hpp"
 #include "../Genie/String.hpp"
+#include "../Physics/RigidBody.hpp"
 
 #include "CActorComponent.hpp"
 
@@ -42,6 +43,9 @@ class CarsVehicle : public CBulletVehicle {
 public:
 	static void BumpBashHandle(CActor* actor, CActor* victim, bool unk) {
 		CarsVehicle_BumpBashHandle(actor, victim, unk);
+	}
+	inline Physics::RigidBody* GetRigidBody() {
+		return *reinterpret_cast<Physics::RigidBody**>(reinterpret_cast<std::uintptr_t>(this) + 0x9CC);
 	}
 	inline CarEnergy& GetCarEnergy() {
 		return *reinterpret_cast<CarEnergy*>(reinterpret_cast<std::uintptr_t>(this) + 0x11F0);

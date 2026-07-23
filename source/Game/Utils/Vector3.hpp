@@ -34,6 +34,10 @@ struct Vector3 {
 		return std::sqrt(x * x + y * y + z * z);
 	}
 
+	inline float LengthSquared() const {
+		return x * x + y * y + z * z;
+	}
+
 	inline void Normalize() {
 		float norm = std::sqrt(x * x + y * y + z * z);
 		if (norm != 0.0f) {
