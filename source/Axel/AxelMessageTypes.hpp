@@ -18,6 +18,7 @@ namespace axel::message {
         DoneLoading = 4,
         StartGame = 5,
         WeaponFired = 6,
+        SendAnimEvent = 7,
     };
 
     struct MessageHeader {
@@ -96,6 +97,19 @@ namespace axel::message {
                 sender,
                 recipient,
                 start_in_ms
+            };
+            return ret;
+        }
+    };
+
+    struct SendAnimEventPacket : public MessageHeader {
+        unsigned int hash;
+        static inline SendAnimEventPacket make(std::uint8_t sender, std::uint8_t recipient, unsigned int hash) {
+            SendAnimEventPacket ret{
+                MessageType::SendAnimEvent,
+                sender,
+                recipient,
+                hash
             };
             return ret;
         }

@@ -171,6 +171,11 @@ enum class CarsFrontEndScreen : int {
     Axel_EnterLobbyName = 42,
 };
 
+struct HistoryEntry {
+    CarsFrontEndScreen screen;
+    unsigned int unknown;
+};
+
 class CarsFrontEnd : public FrontEndLayer {
 public:
     struct FrontendFlashFunctions {
@@ -190,16 +195,12 @@ public:
     unsigned char field27_0x96;
     unsigned char field28_0x97;
     float field29_0x98[4];
-    enum CarsFrontEndScreen currentScreen;
-    int clearance_mission_index_2;
-    int unk_game_mode_index;
+    HistoryEntry current;
+    int gameType;
     Flash::FlashControlMapper* guiController;
-    Flash::Movie* field34_0xb8;
-    Flash::Movie* field35_0xbc;
-    unsigned char field36_0xc0;
-    unsigned char field37_0xc1;
-    unsigned char field38_0xc2;
-    unsigned char field39_0xc3;
+    Flash::Movie* primaryMovie;
+    Flash::Movie* backAnim;
+    bool backAnimVisible;
     unsigned int field40_0xc4;
     Flash::EngineTextureSet* controllerButtons;
     Flash::EngineTextureSet* badgeIcons;
@@ -212,14 +213,14 @@ public:
     Genie::Array<float> field49_0xe8;
     Genie::Array<float> field50_0xfc;
     FrontendFlashFunctions frontendFlashFunctions;
-    Genie::List<Genie::String> field52_0x3e8;
-    char* field53_0x408;
-    char* previous_screen_to_set;
-    char* field55_0x410;
-    char* field56_0x414;
-    unsigned int field57_0x418;
-    char* field58_0x41c;
-    unsigned int field59_0x420;
+    Genie::List<HistoryEntry> history;
+    char* miniMenuHistoryText;
+    char* miniMenuTitleText;
+    char* miniMenuTitleImage;
+    char* missionIdStr2;
+    char* missionIdStr;
+    char* unkLockStateList;
+    unsigned int unkUnused;
     char clearanceMissionIndex;
     unsigned char field61_0x425;
     unsigned char field62_0x426;
@@ -229,11 +230,12 @@ public:
     unsigned char field66_0x42a;
     unsigned char field67_0x42b;
     char* freeplaySettingDescriptionsString;
-    char* field69_0x430;
+    char* gameTypeString;
     char* freeplaySettingOptionsString;
     char* freeplaySettingDescriptions[6];
     char* freeplaySettingOptionsList[6];
-    unsigned char field73_0x468[8];
+    char* squadSeriesFreeplaySettingDescriptionString;
+    unsigned char field73_0x46c[4];
     int field81_0x470;
     unsigned char field82_0x474[68];
     UnkFEStruct field150_0x4b8[11];

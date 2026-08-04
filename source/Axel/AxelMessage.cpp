@@ -12,10 +12,14 @@ auto axel::message::handle_incoming(const std::span<const std::uint8_t> message)
 		case axel::message::MessageType::ExitFrontEnd:
 			break;
 		case axel::message::MessageType::VehicleStatePeriodic:
+			axel::CONTEXT->vehicleStateValid[header->sender_axel_id] = true;
 			axel::CONTEXT->vehicleStates[header->sender_axel_id] = reinterpret_cast<const axel::message::VehicleStatePacket*>(header)->state;
 			break;
 		case axel::message::MessageType::WeaponFired:
 			axel::ingame::fire_weapon(header->sender_axel_id, reinterpret_cast<const axel::message::WeaponFiredPacket*>(header)->mainOrRear);
+			break;
+		case axel::message::MessageType::SendAnimEvent:
+			axel::ingame::dispatch_anim_event(header->sender_axel_id, reinterpret_cast<const axel::message::SendAnimEventPacket*>(header)->hash);
 			break;
 		case axel::message::MessageType::DoneLoading:
 			if (axel::CONTEXT->isHost) {

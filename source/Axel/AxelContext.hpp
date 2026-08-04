@@ -20,6 +20,7 @@ namespace axel {
 		STEAM_CALLBACK(Context, OnLobbyCreate, LobbyCreated_t, m_CallbackOnLobbyCreate);
 		STEAM_CALLBACK(Context, OnLobbyEnter, LobbyEnter_t, m_CallbackOnLobbyEnter);
 		STEAM_CALLBACK(Context, OnLobbyChatUpdate, LobbyChatUpdate_t, m_CallbackOnLobbyChatUpdate);
+		STEAM_CALLBACK(Context, OnLobbyDataUpdate, LobbyDataUpdate_t, m_CallbackOnLobbyDataUpdate);
 	public:
 		// The following members are 'State Variables', meaning they're pretty much always accessible and
 		// reflect the current session/lobby state:
@@ -40,6 +41,9 @@ namespace axel {
 		CSteamID lobbyID;
 		// The current, unfiltered `VehicleState` of each lobby member.
 		std::array<VehicleState, 10> vehicleStates = {};
+		// Whether or not we have recieved a `VehicleState` packet from a particular lobby member.
+		std::array<bool, 10> vehicleStateValid = {};
+		// Our previous vehicle state. This is used for calculating acceleration.
 		VehicleState myPreviousState = {};
 
 		// These are used explicitly for facilitating or responding to state *changes*, and often represent
@@ -47,6 +51,9 @@ namespace axel {
 
 		// Whether or not the player count changed since the last call to `SteamAPI_RunCallbacks`.
 		bool playerCountChanged = false;
+		// Whether or not a lobby member's selected character has changed since the last call to `SteamAPI_RunCallbacks`.
+		bool selectedCarChanged = false;
+
 		// Whether or not a lobby list was requested.
 		bool lobbyListRequested = false;
 		// Whether or not a lobby list has been recieved.
@@ -70,6 +77,14 @@ namespace axel {
 		std::chrono::utc_clock::time_point startTime = {};
 		// Whether or not the party leader has told us to start the race. This is only read/written to if we are NOT the party leader.
 		bool hostRequestedGameStart = false;
+
+		// Used by the UI system to handle sending the user back to the `Axel_Online` menu if the network returns an empty lobby list.
+		bool noOpenLobbiesSendBack = false;
+		int noOpenLobbiesPopupTimerMs = 0;
+		
+		// Used by the `Axel_EnterLobbyName` screen.
+		std::string softwareKeyboardBuffer = "";
+		bool softwareKeyboardCapsLock = false;
 
 		// The network instance.
 		std::unique_ptr<SteamNet> network = nullptr;

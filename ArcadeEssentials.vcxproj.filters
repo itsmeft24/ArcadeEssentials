@@ -136,6 +136,21 @@
     <ClCompile Include="source\Patch\FMV\Driver.cpp">
       <Filter>Source\Patch\FMV</Filter>
     </ClCompile>
+    <ClCompile Include="source\Axel\AxelUI.cpp">
+      <Filter>Source\Axel</Filter>
+    </ClCompile>
+    <ClCompile Include="source\Axel\AxelContext.cpp">
+      <Filter>Source\Axel</Filter>
+    </ClCompile>
+    <ClCompile Include="source\Axel\AxelInGame.cpp">
+      <Filter>Source\Axel</Filter>
+    </ClCompile>
+    <ClCompile Include="source\Axel\AxelMessage.cpp">
+      <Filter>Source\Axel</Filter>
+    </ClCompile>
+    <ClCompile Include="source\Axel\SteamNet.cpp">
+      <Filter>Source\Axel</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="source\Game\Types.hpp">

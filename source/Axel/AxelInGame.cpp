@@ -8,6 +8,7 @@
 #include "../Game/Components/ActiveMoves.hpp"
 #include "../Game/Components/CarsReactionMonitor.hpp"
 #include "../Game/Components/CarsWeaponInventory.hpp"
+#include "../Game/Utils/AnimEventDispatcher.hpp"
 #include "../Game/Hud/CarsHud.hpp"
 
 using namespace std::chrono_literals;
@@ -180,7 +181,19 @@ DefineReplacementHook(ArcadeManager_CanStart) {
 DefineReplacementHook(ShufflePlayerControllersDown) {
 	static void __fastcall callback(CarsFrontEnd * _this) {
 		original(_this);
-
+		if (axel::online()) {
+			for (auto i = 0; i < axel::CONTEXT->playerCount; i++) {
+				std::string defaultAvatar = "DefaultAvatar";
+				if (i != 0) {
+					defaultAvatar += std::to_string(i + 1);
+				}
+				int axelId = axel::to_axel_id(i);
+				const char* carId = SteamMatchmaking()->GetLobbyMemberData(axel::CONTEXT->lobbyID, axel::CONTEXT->lobbyMembers[axelId].steamId, "selected_car");
+				int carIdNum = std::stoi(carId + 4);
+				GameEnv_SetWorldData(*g_GameEnv, defaultAvatar.data(), (*g_CarManager)->carInfos[carIdNum].name, *reinterpret_cast<int*>(*g_GameEnv + 0x6180));
+			}
+		}
+		/*
 		GameEnv_SetWorldData(*g_GameEnv, "DefaultAvatar", "McQueen", *reinterpret_cast<int*>(*g_GameEnv + 0x6180));
 		GameEnv_SetWorldData(*g_GameEnv, "DefaultAvatar2", "McQueen", *reinterpret_cast<int*>(*g_GameEnv + 0x6180));
 		GameEnv_SetWorldData(*g_GameEnv, "DefaultAvatar3", "McQueen", *reinterpret_cast<int*>(*g_GameEnv + 0x6180));
@@ -191,6 +204,32 @@ DefineReplacementHook(ShufflePlayerControllersDown) {
 		GameEnv_SetWorldData(*g_GameEnv, "DefaultAvatar8", "McQueen", *reinterpret_cast<int*>(*g_GameEnv + 0x6180));
 		GameEnv_SetWorldData(*g_GameEnv, "DefaultAvatar9", "McQueen", *reinterpret_cast<int*>(*g_GameEnv + 0x6180));
 		GameEnv_SetWorldData(*g_GameEnv, "DefaultAvatar10", "McQueen", *reinterpret_cast<int*>(*g_GameEnv + 0x6180));
+		*/
+	}
+};
+
+DefineReplacementHook(SendAnimEvent) {
+	static void _cdecl callback(const char* event, AgentID target, void* data) {
+		if (std::string_view(event).contains("QuickStart")) {
+			CActor* actor = CActor::FromHandle(target);
+			Cars2VehicleDBlock* block = Cars2VehicleDBlock::Get(*actor);
+			if (block != nullptr) {
+				int player = block->m_playerNum - 1;
+				if (player == 0) {
+					for (auto i = 0; i < axel::CONTEXT->playerCount; i++) {
+						if (i != axel::CONTEXT->myAxelId) {
+							logger::log_format("[AnimEventDispatcher::SendEvent] Sending Event: {} to {}...", event, i);
+							auto startGame = axel::message::SendAnimEventPacket::make(axel::CONTEXT->myAxelId, i, AnimEventDispatcher::GetEventHash(event));
+							std::vector<std::uint8_t> packetBytes(sizeof(axel::message::SendAnimEventPacket));
+							std::memcpy(packetBytes.data(), &startGame, sizeof(axel::message::SendAnimEventPacket));
+							axel::CONTEXT->network->send_routed_message_async(axel::CONTEXT->lobbyMembers[i].steamId, packetBytes);
+						}
+					}
+
+				}
+			}
+		}
+		original(event, target, data);
 	}
 };
 
@@ -244,10 +283,6 @@ DefineReplacementHook(SwitchToWeaponIndex) {
 				if (player != 0) {
 					return;
 				}
-
-				// Now, if we (the local player) are selecting a new weapon we need to tell the other players which one we got before it's assigned.
-				axel::VehicleState& myState = axel::CONTEXT->vehicleStates[axel::CONTEXT->myAxelId];
-				// myState.currentWeapon = std::to_underlying(weaponIndex);
 			}
 		}
 
@@ -282,10 +317,16 @@ DefineReplacementHook(PullTriggerHook) {
 auto axel::ingame::fire_weapon(int attacker, int mainOrRear) -> void {
 	CActor* actor = reinterpret_cast<CActor*>(Players_GetAvatarFromPlayerId(axel::CONTEXT->lobbyMembers[attacker].playerId));
 	CarsWeaponInventory* inv = reinterpret_cast<CarsWeaponInventory*>(actor->GetComponentByName("WeaponInventory"));
-	logger::log_format("[fire_weapon] Attacker: {} Fired Weapon (Main/Rear): {}, IsNull: {}", attacker, mainOrRear, inv == nullptr);
+	logger::log_format("[axel::ingame::fire_weapon] Attacker: {} Fired Weapon (Main/Rear): {}, IsNull: {}", attacker, mainOrRear, inv == nullptr);
 	if (inv != nullptr) {
 		inv->FireSelectedWeapon(mainOrRear);
 	}
+}
+
+auto axel::ingame::dispatch_anim_event(int targetAxelId, unsigned int hash) -> void {
+	CActor* actor = reinterpret_cast<CActor*>(Players_GetAvatarFromPlayerId(axel::CONTEXT->lobbyMembers[targetAxelId].playerId));
+	logger::log_format("[axel::ingame::dispatch_anim_event] Axel ID: {} Disapatched Event: {}", targetAxelId, hash);
+	AnimEventDispatcher::SendEvent(hash, actor->GetHandle());
 }
 
 static float PREVIOUS_RACE_TIME = 0.0f;
@@ -345,6 +386,11 @@ DefineReplacementHook(UpdateAIMgr) {
 				int opponentAxelId = axel::to_axel_id(i);
 				// Negative latency is bad!
 				double latencyDt = (std::max)(0.0, (double)(raceTime - axel::CONTEXT->vehicleStates[opponentAxelId].raceTime));
+				
+				// Wait for first packet.
+				if (!axel::CONTEXT->vehicleStateValid[opponentAxelId]) {
+					continue;
+				}
 
 				logger::log_format("[NetUpdate] Latency from: {} to {} is {}.", axel::CONTEXT->myAxelId, opponentAxelId, raceTime - axel::CONTEXT->vehicleStates[opponentAxelId].raceTime);
 				
@@ -401,6 +447,17 @@ DefineReplacementHook(UpdateAIMgr) {
 
 				// Apply ActiveMoves state.
 				ActiveMoves::ActionState opponentState = static_cast<ActiveMoves::ActionState>(axel::CONTEXT->vehicleStates[opponentAxelId].actionState);
+				/*
+				activeMoves->SetSideSteppingLeft(opponentAxelId == ActiveMoves::ActionState::SideStepLeft);
+				activeMoves->SetSideSteppingRight(opponentAxelId == ActiveMoves::ActionState::SideStepRight);
+				activeMoves->SetTwoWheelingLeft(opponentAxelId == ActiveMoves::ActionState::TwoWheelLeft);
+				activeMoves->SetTwoWheelingRight(opponentAxelId == ActiveMoves::ActionState::TwoWheelRight);
+				activeMoves->SetDriftingLeft(opponentAxelId == ActiveMoves::ActionState::DriftLeft, false);
+				activeMoves->SetDriftingRight(opponentAxelId == ActiveMoves::ActionState::DriftRight, false);
+				activeMoves->SetBackwardsDriving(opponentAxelId == ActiveMoves::ActionState::BackwardsDriving);
+				activeMoves->SetBunnyHopping(opponentAxelId == ActiveMoves::ActionState::BunnyHop, false);
+				*/
+				
 				if (opponentState == ActiveMoves::ActionState::SideStepLeft) {
 					activeMoves->SetSideSteppingLeft(true);
 				}
@@ -419,12 +476,17 @@ DefineReplacementHook(UpdateAIMgr) {
 				else if (opponentState == ActiveMoves::ActionState::DriftRight) {
 					activeMoves->SetDriftingRight(true, false);
 				}
+				/*
 				else if (opponentState == ActiveMoves::ActionState::BackwardsDriving) {
 					activeMoves->SetBackwardsDriving(true);
 				}
+				*/
 				else if (opponentState == ActiveMoves::ActionState::BunnyHop) {
 					activeMoves->SetBunnyHopping(true, false);
 				}
+				activeMoves->SetBackwardsDriving(opponentState == ActiveMoves::ActionState::BackwardsDriving);
+
+				
 				// WIP: Handle Jump Tricking, Taunting, and Drift Wall Riding.
 
 				activeMoves->m_turboing = axel::CONTEXT->vehicleStates[opponentAxelId].isTurboing;
@@ -714,6 +776,7 @@ auto axel::ingame::install_hooks() -> void {
 	GetMaxPC::install_at_ptr(0x00554010);
 	SwitchToWeaponIndex::install_at_ptr(0x005c1b20);
 	PullTriggerHook::install_at_ptr(0x005b6f90);
+	SendAnimEvent::install_at_ptr(0x00f0f7a0);
 
 	// Player expansion dick:
 	sunset::inst::nop(reinterpret_cast<void*>(0x004f2840), 5);
@@ -721,5 +784,11 @@ auto axel::ingame::install_hooks() -> void {
 	PlayerSuspensionInit::install_at_ptr(0x0058fb63);
 	expand_dong();
 	DomainExpansion_MalevolentGoats::install_at_ptr(0x00f875d0);
+
+	sunset::utils::set_permission(reinterpret_cast<void*>(0x004cd28e + 3), sizeof(char*), sunset::utils::Perm::ExecuteReadWrite);
+	*reinterpret_cast<const char**>(0x004cd28e + 3) = "TEAM_RED,TEAM_BLUE,TEAM_GREEN,TEAM_YELLOW";
+	
+	sunset::utils::set_permission(reinterpret_cast<void*>(0x004cd2c9 + 3), sizeof(char*), sunset::utils::Perm::ExecuteReadWrite);
+	*reinterpret_cast<const char**>(0x004cd2c9 + 3) = "TEAM_SOLO,TEAM_RED,TEAM_BLUE,TEAM_GREEN,TEAM_YELLOW";
 	// Player expansion dick end!
 }

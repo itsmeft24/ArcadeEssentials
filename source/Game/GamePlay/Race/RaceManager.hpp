@@ -9,8 +9,6 @@ inline auto	RaceManager_UpdateRacerControlContexts = (void(__thiscall*)(class Ra
 
 class RaceManager {
 public:
-
-
 #ifdef WIN32_WII
 	enum class RaceState {
 		Inactive = 0,
@@ -63,8 +61,70 @@ public:
 		void* m_unk4;
 		void* m_unk5;
 	};
-public:
 
+	struct ResetLocator {
+		Vector3 position;
+		float heading;
+		float trackPosition;
+	};
+
+public:
+	bool m_abortRace;
+	bool m_racerListLocked;
+	float m_arcade180sTimer;
+	float m_arcadeAutoPilotTimer;
+	bool m_arcadeEngageAutoPilot;
+	bool m_arcadeBackwardsDriving;
+	float m_arcadeBwdTimer;
+	unsigned int m_auroraCategory;
+	struct MissionGameInf* m_missionGame;
+	Genie::Array<RaceManager::RacerData> m_racerDataList;
+	unsigned int m_raceState;
+	int m_curLap;
+	float m_lapLength;
+	float m_raceStartTime;
+	int m_restartPlaceRacerFrameCount;
+	struct RaceManagerNode* m_meridianNode;
+	float m_raceRestartCountDown;
+	struct CurveBSpline* m_lapPath;
+	bool m_raceEvaluated;
+	int m_initFacial;
+	int m_facialOn;
+	int m_facialOff;
+	unsigned int m_flags;
+	unsigned int m_humanRacerCount;
+	unsigned int m_leadingHumanRacerHandle;
+	int m_leadingHumanRacerIndex;
+	bool m_leadingHumanRacerValid;
+	int m_leadingRacerHandle;
+	int m_leadingRacerIndex;
+	bool m_leadingRacerValid;
+	unsigned int m_lastHumanRacerIndex;
+	bool m_ranksValid;
+	struct CACChallengeSettings* m_cacChallengeSettings;
+	CMessageOwner m_owner;
+	GenericMessageHandler<RaceManager> m_forceRaceStart;
+	GenericMessageHandler<RaceManager> m_eventStart;
+	GenericMessageHandler<RaceManager> m_endTutorial;
+	GenericMessageHandler<RaceManager> m_toggleRainFX;
+	bool m_rainFXOn;
+	unsigned int m_pipIdTauntLeft;
+	unsigned int m_pipIdTauntRight;
+	bool m_lapPathChecked;
+	bool m_unknown0;
+	bool m_trackMessageSent;
+	bool m_showingResults;
+	bool m_forceOverride;
+	bool m_facialOverride;
+	bool m_unknown1;
+	bool m_unknown2;
+	bool m_isTeamRace;
+	int m_unknown3;
+	bool m_arcadeRioDropped;
+	bool m_highGravEnabled;
+	DynamicArray<ResetLocator> m_locatorList;
+	int m_initializeWait;
+	unsigned int m_trophyTimer;
 public:
 	inline bool RacerIsAIControlled(ActorHandle act, int indexHint) {
 		return RaceManager_RacerIsAIControlled(this, act, indexHint);
@@ -91,7 +151,7 @@ public:
 	}
 
 	inline RacerData* GetRacerData(int i) {
-		return *reinterpret_cast<RacerData**>(reinterpret_cast<std::uintptr_t>(this) + 0x20) + i;
+		return &m_racerDataList[i];
 	}
 
 	inline int GetPlayerNumber(CActor& actor) {
@@ -104,5 +164,6 @@ public:
 };
 
 static_assert(sizeof(RaceManager::RacerData) == 0xB0);
+static_assert(sizeof(RaceManager) == 0x13c);
 
 inline RaceManager** g_RaceManager = reinterpret_cast<RaceManager**>(0x018ae0fc);

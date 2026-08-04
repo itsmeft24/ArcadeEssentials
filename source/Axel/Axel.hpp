@@ -16,12 +16,14 @@ namespace axel {
 	// The time between each sent/received update.
 	constexpr auto TICK_TIME = 16.6666666666667ms;
 
-	// Updates the global context with respect to the UI system. Called every `CarsFrontEnd::Update`.
 	namespace ui {
+		// Initializes all UI-specific hooks.
+		auto install_hooks() -> void;
+
 		// Called every `CarsFrontEnd::GoBack`.
 		auto on_retract(CarsFrontEnd* _this) -> void;
 
-		// Called every `CarsFrontEnd::Update`.
+		// Updates the global context with respect to the UI system. Called every `CarsFrontEnd::Update`.
 		auto update(CarsFrontEnd* _this) -> void;
 
 		// Called on every `CarsFrontEnd::Update` for which a foreign (non-vanilla) screen state is observed.
@@ -36,6 +38,10 @@ namespace axel {
 		auto get_lobby_descriptions() -> std::string;
 
 		auto get_lobby_name(int) -> std::string;
+
+		auto load_lobby_screen_right() -> void;
+
+		auto refresh_lobby_member_list() -> void;
 	};
 
 	namespace ingame {
@@ -43,6 +49,7 @@ namespace axel {
 		auto install_hooks() -> void;
 
 		auto fire_weapon(int attacker, int mainOrRear) -> void;
+		auto dispatch_anim_event(int targetAxelId, unsigned int hash) -> void;
 	};
 
 	// Asks the network to pull a lobby list. Should be called once; continously call `received_lobby_list` after this to check if the lobby list is ready to use.
@@ -85,6 +92,36 @@ namespace axel {
 	// Checks if we've created the lobby that we asked to earlier.
 	inline auto has_created_lobby() -> bool {
 		return CONTEXT->lobbyCreateRequested && CONTEXT->lobbyCreated;
+	}
+
+	// Resets the global context and asks the network to leave the current lobby.
+	inline auto leave_lobby() {
+		SteamMatchmaking()->LeaveLobby(axel::CONTEXT->lobbyID);
+		CONTEXT->myAxelId = -1;
+		CONTEXT->inLobby = false;
+		CONTEXT->isHost = false;
+		CONTEXT->playerCount = 1;
+		CONTEXT->lobbyMembers = {};
+		CONTEXT->vehicleStates = {};
+		CONTEXT->vehicleStateValid = {};
+		CONTEXT->myPreviousState = {};
+		CONTEXT->playerCountChanged = false;
+		CONTEXT->selectedCarChanged = false;
+		CONTEXT->lobbyListRequested = false;
+		CONTEXT->lobbyListReceived = false;
+		CONTEXT->lobbyList = {};
+		CONTEXT->lobbyJoinRequested = false;
+		CONTEXT->lobbyJoinRequestFulfilled = false;
+		CONTEXT->lobbyCreateRequested = false;
+		CONTEXT->lobbyCreated = false;
+		CONTEXT->isMemberReady = {};
+		CONTEXT->allOpponentsReady = false;
+		CONTEXT->startTime = {};
+		CONTEXT->hostRequestedGameStart = false;
+		CONTEXT->noOpenLobbiesSendBack = 0;
+		CONTEXT->noOpenLobbiesPopupTimerMs = false;
+		CONTEXT->softwareKeyboardBuffer = "";
+		CONTEXT->softwareKeyboardCapsLock = false;
 	}
 
 	// Enables/Disables Axel.

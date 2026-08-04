@@ -68,8 +68,9 @@ DefineInlineHook(MPCarSelectUI) {
 	static void _cdecl callback(sunset::InlineCtx & ctx) {
 #ifdef MP_STRATEGY_AXEL
 		if (axel::online()) {
+			axel::ui::load_lobby_screen_right();
 			ctx.ecx.pointer = const_cast<char*>(PLAYER_COUNT_1);
-			*reinterpret_cast<const char**>(ctx.ebp.unsigned_integer - 0x14) = "axel_lobby_car_select";
+			*reinterpret_cast<const char**>(ctx.ebp.unsigned_integer - 0x14) = "axel_lobby_screen_left";
 		}
 		else {
 			int locked_controllers = get_locked_player_count();

@@ -14,12 +14,12 @@ class GameProgressionManager {
 public:
 	enum class MissionMode {
 		Race,
-		Bomb,
+		Bomb, // Capture the Flag / Disruptor
 		Hunter,
 		Arena,
-		Collect,
+		Collect, // Survival
 		Pursuit, // Unused
-		Takedown,
+		Takedown, // Attack
 		Tutorial,
 	};
 
@@ -42,7 +42,7 @@ public:
 	
     struct MissionModeInfo {
 		const char* name;
-		const char* localized_name;
+		const char* localizedName;
 		MissionMode mode;
 	};
 
@@ -83,16 +83,33 @@ public:
         unsigned char field66_0xbf;
     };
 
+    enum class TargetPreference : unsigned int {
+        HumanOnly = 0,
+        PreferHuman,
+        NoPreference,
+        PreferAI,
+        AIOnly
+    };
+
     struct CarAIOverrideParameters {
         float aiDrivingSkill;
         float aiRouteFindingSkill;
         float aiTurboSkill;
         float aiWeaponSkill;
-        float unknown;
-        unsigned int unknown2;
-        bool unknown3;
+        float health;
+        char* baseWeapon;
+        bool hasPickups;
         bool hasCharacterDuplicate;
-        char unknown4[0x27];
+        float storyStart;
+        float storyMid1;
+        float storyMid2;
+        float storyFinish;
+        TargetPreference targetPreference;
+        unsigned int shouldTargetMe;
+        unsigned int hasBuddy;
+        unsigned int useMaster;
+        ActorHandle actorHandle;
+        char* alternateId;
     };
 
     struct MissionSettings {
@@ -194,5 +211,6 @@ public:
 };
 
 static_assert(sizeof(GameProgressionManager) == 0x1d40);
+static_assert(sizeof(GameProgressionManager::CarAIOverrideParameters) == 0x44);
 
 inline GameProgressionManager** g_GameProgressionManager = reinterpret_cast<GameProgressionManager**>(0x018ae0f0);

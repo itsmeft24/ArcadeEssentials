@@ -16,7 +16,7 @@ auto axel::update_context() -> void {
     SteamAPI_RunCallbacks();
 }
 
-axel::Context::Context() : m_CallbackOnLobbyEnter(this, &Context::OnLobbyEnter), m_CallbackOnLobbyChatUpdate(this, &Context::OnLobbyChatUpdate), m_CallbackOnLobbyCreate(this, &Context::OnLobbyCreate), m_CallbackOnRecieveLobbyList(this, &Context::OnRecieveLobbyList) {
+axel::Context::Context() : m_CallbackOnLobbyEnter(this, &Context::OnLobbyEnter), m_CallbackOnLobbyChatUpdate(this, &Context::OnLobbyChatUpdate), m_CallbackOnLobbyCreate(this, &Context::OnLobbyCreate), m_CallbackOnRecieveLobbyList(this, &Context::OnRecieveLobbyList), m_CallbackOnLobbyDataUpdate(this, &Context::OnLobbyDataUpdate) {
     network = std::make_unique<SteamNet>();
 }
 
@@ -46,8 +46,10 @@ void axel::Context::OnRecieveLobbyList(LobbyMatchList_t* pLobbyMatchList) {
     lobbyList.clear();
     for (std::size_t i = 0; i < pLobbyMatchList->m_nLobbiesMatching; i++) {
         CSteamID lobby = SteamMatchmaking()->GetLobbyByIndex(i);
-        lobbyList.push_back(lobby);
-        logger::log_format("[axel::Context::RecieveLobbyList] Found Lobby: {} with {} players.", lobby.ConvertToUint64(), SteamMatchmaking()->GetNumLobbyMembers(lobby));
+        if (std::string_view(SteamMatchmaking()->GetLobbyData(lobby, "is_axel")) == "true") {
+            lobbyList.push_back(lobby);
+            logger::log_format("[axel::Context::RecieveLobbyList] Found Lobby: {} with {} players.", lobby.ConvertToUint64(), SteamMatchmaking()->GetNumLobbyMembers(lobby));
+        }
     }
     if (lobbyListRequested) {
         lobbyListReceived = true;
@@ -126,62 +128,107 @@ void axel::Context::OnLobbyEnter(LobbyEnter_t* e) {
     // Here, we iterate over all Axel IDs before ourselves, and assign their Player IDs such that Axel ID 0 gets assigned Player ID 1, Axel ID 1 gets assigned Player 2, etc.
     for (std::size_t i = 0; i < myAxelId; i++) {
         lobbyMembers[i].playerId = i + 1;
-        // axel::GAME_SESSION.axelIdToPlayerId[i] = i + 1;
-        // axel::GAME_SESSION.playerIdToAxelId[i + 1] = i;
     }
 
     // Now, we need to make sure that the we are Player ID 0 no matter what, even if our Axel ID is not 0.
     lobbyMembers[myAxelId].playerId = 0;
-    // axel::GAME_SESSION.axelIdToPlayerId[axel::GAME_SESSION.myAxelId.get()] = 0;
-    // axel::GAME_SESSION.playerIdToAxelId[0] = axel::GAME_SESSION.myAxelId.get();
-
-    // Finally, we set up `playerIdToSteamId` based off of `axelIdToPlayerId` and `axelIdToSteamId`.
-    /*
-    for (std::size_t i = 0; i < axel::GAME_SESSION.playerCount; i++) {
-        axel::GAME_SESSION.playerIdToSteamId[axel::GAME_SESSION.axelIdToPlayerId[i]] = axel::GAME_SESSION.axelIdToSteamId[i];
-    }
-    */
 }
 
 // Called when someone *else* joins or leaves our lobby.
 void axel::Context::OnLobbyChatUpdate(LobbyChatUpdate_t* e) {
     logger::log_format("[axel::Context::OnLobbyChatUpdate] Chat Updated!");
 
-    bool hasJoined = (e->m_rgfChatMemberStateChange & k_EChatMemberStateChangeEntered) != 0;
-    if (!hasJoined) {
-        return;
-    }
-    /*
-    When someone leaves the lobby, we need to get our Axel ID as well as the person who left, and carefully
-    shift everyone's entries in the session context.
-    */
+    uint32 stateChange = e->m_rgfChatMemberStateChange;
+    CSteamID changedUser = e->m_ulSteamIDUserChanged;
 
-    CSteamID joined = e->m_ulSteamIDUserChanged;
+    if (stateChange & k_EChatMemberStateChangeEntered) {
+        logger::log_format("[axel::Context::OnLobbyChatUpdate] Joinee: {}, Lobby Size: {}", changedUser.ConvertToUint64(), SteamMatchmaking()->GetNumLobbyMembers(lobbyID));
 
-    logger::log_format("[axel::Context::OnLobbyChatUpdate] Joinee: {}, Lobby Size: {}", e->m_ulSteamIDUserChanged, SteamMatchmaking()->GetNumLobbyMembers(lobbyID));
-
-    int axelId = -1;
-    const char* axelIdStr = SteamMatchmaking()->GetLobbyMemberData(lobbyID, joined, "axel_id");
-    if (axelIdStr != nullptr) {
-        if (strlen(axelIdStr) != 0) {
+        int axelId = -1;
+        const char* axelIdStr = SteamMatchmaking()->GetLobbyMemberData(lobbyID, changedUser, "axel_id");
+        if (axelIdStr != nullptr && strlen(axelIdStr) != 0) {
             axelId = std::atoi(axelIdStr);
         }
+
+        if (axelId == -1) {
+            axelId = SteamMatchmaking()->GetNumLobbyMembers(lobbyID) - 1;
+            logger::log_format("[axel::Context::OnLobbyChatUpdate] Remote user did not assign themselves an Axel ID. Defaulting to: {}...", axelId);
+        }
+
+        lobbyMembers[axelId].steamId = changedUser;
+        playerCount++;
+        playerCountChanged = true;
+    }
+    else if (stateChange & (k_EChatMemberStateChangeLeft | k_EChatMemberStateChangeDisconnected | k_EChatMemberStateChangeKicked | k_EChatMemberStateChangeBanned)) {
+        logger::log_format("[axel::Context::OnLobbyChatUpdate] User left: {}, Lobby Size: {}", changedUser.ConvertToUint64(), SteamMatchmaking()->GetNumLobbyMembers(lobbyID));
+
+        // 1. Find the Axel ID of the person who left
+        int leftAxelId = -1;
+        for (int i = 0; i < playerCount; i++) {
+            if (lobbyMembers[i].steamId == changedUser) {
+                leftAxelId = i;
+                break;
+            }
+        }
+
+        if (leftAxelId == -1) {
+            logger::log_format("[axel::Context::OnLobbyChatUpdate] Warning: Could not find leaving user in local state!");
+            return;
+        }
+
+        // 2. Shift entries leftward to fill the gap
+        // (We must shift all state arrays indexed by Axel ID)
+        for (int i = leftAxelId; i < playerCount - 1; i++) {
+            lobbyMembers[i] = lobbyMembers[i + 1];
+            vehicleStates[i] = vehicleStates[i + 1];
+            isMemberReady[i] = isMemberReady[i + 1];
+        }
+
+        // Clear the now-duplicate last entry
+        int lastIndex = playerCount - 1;
+        lobbyMembers[lastIndex] = LobbyMemberState(); // Reset CSteamID to 0ull and playerId to -1
+        vehicleStates[lastIndex] = VehicleState();
+        isMemberReady[lastIndex] = false;
+
+        // 3. Update our own Axel ID if we were situated after the player who left
+        if (myAxelId > leftAxelId) {
+            myAxelId--;
+            // Broadcast our shifted Axel ID so new joiners map us correctly
+            SteamMatchmaking()->SetLobbyMemberData(lobbyID, "axel_id", std::to_string(myAxelId).c_str());
+        }
+
+        // 4. Check for host migration (if the owner left, Steam assigns a new one automatically)
+        isHost = SteamMatchmaking()->GetLobbyOwner(lobbyID) == SteamUser()->GetSteamID();
+        if (isHost) {
+            logger::log_format("[axel::Context::OnLobbyChatUpdate] We are now the lobby host.");
+        }
+
+        playerCount--;
+        playerCountChanged = true;
     }
 
-    if (axelId == -1) {
-        axelId = SteamMatchmaking()->GetNumLobbyMembers(lobbyID) - 1;
-        logger::log_format("[axel::Context::OnLobbyChatUpdate] Remote user did not assign themselves an Axel ID. Defaulting to: {}...", axelId);
+    // --- RECALCULATE PLAYER IDs ---
+    // Whether someone joins or leaves, it's safest to recalculate playerId for everyone
+    // to ensure '0' is always local, and everyone else counts up consecutively.
+    int currentOtherPlayerId = 1;
+    for (int i = 0; i < playerCount; i++) {
+        if (i == myAxelId) {
+            lobbyMembers[i].playerId = 0; // We are always Player 0 locally
+        }
+        else {
+            lobbyMembers[i].playerId = currentOtherPlayerId++;
+        }
     }
+}
 
-    lobbyMembers[axelId].playerId = playerCount;
-    lobbyMembers[axelId].steamId = joined;
-    playerCount++;
-    playerCountChanged = true;
-
-    // GAME_SESSION.axelIdToPlayerId[axelId] = GAME_SESSION.playerCount;
-    // GAME_SESSION.playerIdToAxelId[GAME_SESSION.playerCount] = axelId;
-    // GAME_SESSION.axelIdToSteamId[axelId] = joined;
-    // GAME_SESSION.playerIdToSteamId[GAME_SESSION.playerCount] = joined;
-    // GAME_SESSION.playerCount++;
-    // GAME_SESSION.isDirty = true;
+void axel::Context::OnLobbyDataUpdate(LobbyDataUpdate_t* e) {
+    // Metadata for the actual lobby was changed...
+    if (e->m_ulSteamIDLobby == e->m_ulSteamIDMember) {
+        logger::log_format("[axel::Context::OnLobbyDataUpdate] Lobby metadata was changed.");
+    }
+    // Metadata for a particular lobby member was changed...
+    else {
+        logger::log_format("[axel::Context::OnLobbyDataUpdate] Lobby data for member: {} was changed.", e->m_ulSteamIDMember);
+        selectedCarChanged = true;
+    }
 }
