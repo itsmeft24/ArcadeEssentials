@@ -7,9 +7,23 @@
 #include "../Game/GamePlay/Race/RaceManager.hpp"
 #include "../Game/Components/ActiveMoves.hpp"
 #include "../Game/Components/CarsReactionMonitor.hpp"
+#include "../Game/Components/CarsWeaponInventory.hpp"
 #include "../Game/Hud/CarsHud.hpp"
 
 using namespace std::chrono_literals;
+
+const char* WEAPON_NAMES[10] = {
+	"Leech",
+	"RCSkate",
+	"SatBlitz",
+	"SatQuake",
+	"MachineGun",
+	"OilSlick",
+	"Missile",
+	"MissileThreeShot",
+	"ImpactMine",
+	"XFactor"
+};
 
 // Configures the starting grid location index for each player.
 // For now, we cheaply synchronize them by returning the Axel IDs, since those will be synchronized.
@@ -213,6 +227,67 @@ auto send_vehicle_state() -> void {
 	}
 }
 
+/*
+Here, we make it impossible for the game to call SwitchToWeaponIndex on anyone who ISN'T player 0.
+This means that only when YOU pick up a weapon does a... weapon get picked up.
+
+We handle other players getting weapons by listening for updates over the network
+and assigning them in the per-frame update function, NOT by the actual game logic.
+*/
+DefineReplacementHook(SwitchToWeaponIndex) {
+	static void __fastcall callback(CarsWeaponInventory * _this, std::uintptr_t edx, CarsWeaponInventory::WeaponIndex weaponIndex, bool useKnownWeaponPickupAmmoCount) {
+		if (axel::online()) {
+			Cars2VehicleDBlock* block = Cars2VehicleDBlock::Get(_this->GetActor());
+			if (block != nullptr) {
+				int player = block->m_playerNum - 1;
+				// If the game is trying to assign a weapon to someone else, we need to abort.
+				if (player != 0) {
+					return;
+				}
+
+				// Now, if we (the local player) are selecting a new weapon we need to tell the other players which one we got before it's assigned.
+				axel::VehicleState& myState = axel::CONTEXT->vehicleStates[axel::CONTEXT->myAxelId];
+				// myState.currentWeapon = std::to_underlying(weaponIndex);
+			}
+		}
+
+		original(_this, edx, weaponIndex, useKnownWeaponPickupAmmoCount);
+	}
+};
+
+DefineReplacementHook(PullTriggerHook) {
+	static bool __fastcall callback(std::uintptr_t _this, std::uintptr_t edx, int mainOrRear) {
+		ActorHandle owner = *reinterpret_cast<ActorHandle*>(_this + 0x14);
+		CActor* actor = CActor::FromHandle(owner);
+		Cars2VehicleDBlock* block = Cars2VehicleDBlock::Get(*actor);
+		if (block != nullptr) {
+			int player = block->m_playerNum - 1;
+			if (player == 0) {
+				logger::log_format("[CarsWeapon::PullTrigger] YOU Fired Weapon (Main/Rear): {}", mainOrRear);
+				for (int i = 0; i < axel::player_count(); i++) {
+					if (i != axel::CONTEXT->myAxelId) {
+						auto header = axel::message::WeaponFiredPacket::make(axel::CONTEXT->myAxelId, i, mainOrRear);
+						std::vector<std::uint8_t> packetBytes(sizeof(axel::message::WeaponFiredPacket));
+						std::memcpy(packetBytes.data(), &header, sizeof(axel::message::WeaponFiredPacket));
+						axel::CONTEXT->network->send_routed_message_async(axel::CONTEXT->lobbyMembers[i].steamId, packetBytes);
+					}
+				}
+			}
+		}
+		return original(_this, edx, mainOrRear);
+	}
+};
+
+
+auto axel::ingame::fire_weapon(int attacker, int mainOrRear) -> void {
+	CActor* actor = reinterpret_cast<CActor*>(Players_GetAvatarFromPlayerId(axel::CONTEXT->lobbyMembers[attacker].playerId));
+	CarsWeaponInventory* inv = reinterpret_cast<CarsWeaponInventory*>(actor->GetComponentByName("WeaponInventory"));
+	logger::log_format("[fire_weapon] Attacker: {} Fired Weapon (Main/Rear): {}, IsNull: {}", attacker, mainOrRear, inv == nullptr);
+	if (inv != nullptr) {
+		inv->FireSelectedWeapon(mainOrRear);
+	}
+}
+
 static float PREVIOUS_RACE_TIME = 0.0f;
 
 DefineReplacementHook(UpdateAIMgr) {
@@ -235,6 +310,7 @@ DefineReplacementHook(UpdateAIMgr) {
 				continue;
 
 			void* aiPlayer = DrivingAI_cAIManager_GetPlayerPtr(_this, i);
+			CarsWeaponInventory* weaponInv = *reinterpret_cast<CarsWeaponInventory**>(reinterpret_cast<std::uintptr_t>(aiPlayer) + 0x78);
 			ActiveMoves* activeMoves = *reinterpret_cast<ActiveMoves**>(reinterpret_cast<std::uintptr_t>(aiPlayer) + 0x7C);
 			CarsVehicle* vehicle = *reinterpret_cast<CarsVehicle**>(reinterpret_cast<std::uintptr_t>(aiPlayer) + 0x80);
 			CarsReactionMonitor* reactionMonitor = *reinterpret_cast<CarsReactionMonitor**>(reinterpret_cast<std::uintptr_t>(aiPlayer) + 0x84);
@@ -259,6 +335,8 @@ DefineReplacementHook(UpdateAIMgr) {
 				myState.orientation = orientation;
 				myState.acceleration = (localDt <= 1E-5) ? Vector3() : (myState.velocity - axel::CONTEXT->myPreviousState.velocity) * (1.0 / localDt);
 
+				myState.currentWeapon = std::to_underlying(weaponInv->GetCurrentWeaponIndex());
+
 				send_vehicle_state();
 
 				axel::CONTEXT->myPreviousState = myState;
@@ -266,21 +344,60 @@ DefineReplacementHook(UpdateAIMgr) {
 			else {
 				int opponentAxelId = axel::to_axel_id(i);
 				// Negative latency is bad!
-				double dt = (raceTime - axel::CONTEXT->vehicleStates[opponentAxelId].raceTime);
-				if (dt < 0) {
-					dt = 0;
+				double latencyDt = (std::max)(0.0, (double)(raceTime - axel::CONTEXT->vehicleStates[opponentAxelId].raceTime));
+
+				logger::log_format("[NetUpdate] Latency from: {} to {} is {}.", axel::CONTEXT->myAxelId, opponentAxelId, raceTime - axel::CONTEXT->vehicleStates[opponentAxelId].raceTime);
+				
+				Vector3 targetPos = axel::CONTEXT->vehicleStates[opponentAxelId].position +
+					(axel::CONTEXT->vehicleStates[opponentAxelId].velocity * latencyDt) +
+					(0.5 * axel::CONTEXT->vehicleStates[opponentAxelId].acceleration * latencyDt * latencyDt);
+
+				Vector3 targetVel = axel::CONTEXT->vehicleStates[opponentAxelId].velocity +
+					(axel::CONTEXT->vehicleStates[opponentAxelId].acceleration * latencyDt);
+
+				Matrix3x3 targetOrient = axel::CONTEXT->vehicleStates[opponentAxelId].orientation;
+
+				Physics::RigidBody* rigidBody = vehicle->GetRigidBody();
+				Vector3 currentPos = rigidBody->GetPosition();
+				Vector3 currentVel = rigidBody->GetVelocity();
+				
+				// 3. SPRING-DAMPER INTEGRATION (Avalanche's smoothing algorithm)
+				// You will need to tune these constants. Higher STIFFNESS = snaps faster, higher DAMPING = less wobbling.
+				const float STIFFNESS = 150.0f;
+				const float DAMPING = 20.0f;
+
+				float timeTerm = 1.0f + (DAMPING * localDt) + (STIFFNESS * localDt * localDt);
+				Vector3 finalPos = currentPos;
+				Vector3 finalVel = currentVel;
+
+				if (timeTerm > 0.0001f) {
+					finalVel = (1.0f / timeTerm) * (currentVel + (DAMPING * targetVel + STIFFNESS * (targetPos - currentPos)) * localDt);
+					finalPos = currentPos + (finalVel * localDt);
 				}
 
-				Vector3 dx = 0.5 * axel::CONTEXT->vehicleStates[opponentAxelId].acceleration * dt * dt;
-				dx += (axel::CONTEXT->vehicleStates[opponentAxelId].velocity * dt);
-				Vector3 position = axel::CONTEXT->vehicleStates[opponentAxelId].position + dx;
+				// Clamping: If it's close enough, stop smoothing and just snap to prevent micro-jitter.
+				if ((finalPos - targetPos).LengthSquared() < 0.1f) {
+					finalPos = targetPos;
+					finalVel = targetVel;
+				}
 
-				logger::log_format("[axel::Update] Latency: {}, VelComp: {}, AccelComp: {}", dt, (axel::CONTEXT->vehicleStates[opponentAxelId].velocity * dt).Length(), (0.5 * axel::CONTEXT->vehicleStates[opponentAxelId].acceleration * dt * dt).Length());
+				Matrix4x4 transform = Matrix4x4::FromRotTrans(&targetOrient, &finalPos);
+				Physics_PhysicsMgr_TeleportRigidBody((*g_CollisionSystem) + 0x11D4, rigidBody, &transform, true);
+				rigidBody->SetLocalAngularVelocity(Vector3());
+				rigidBody->ClearForces();
+				rigidBody->ClearDeltas();
+				rigidBody->SetVelocity(finalVel);
 
-				// Vector3 position = axel::CONTEXT->vehicleStates[opponentAxelId].position;
-				Vector3 velocity = axel::CONTEXT->vehicleStates[opponentAxelId].velocity;
-				Matrix3x3 orient = axel::CONTEXT->vehicleStates[opponentAxelId].orientation;
-				Matrix4x4 transform = Matrix4x4::FromRotTrans(&orient, &position);
+				// Handle the weapon inventory.
+				if (axel::CONTEXT->vehicleStates[opponentAxelId].currentWeapon != std::to_underlying(weaponInv->GetCurrentWeaponIndex())) {
+					const char* disp = "Invalid";
+					if (axel::CONTEXT->vehicleStates[opponentAxelId].currentWeapon >= 0 &&
+						axel::CONTEXT->vehicleStates[opponentAxelId].currentWeapon < std::to_underlying(CarsWeaponInventory::WeaponIndex::Max)) {
+						disp = WEAPON_NAMES[axel::CONTEXT->vehicleStates[opponentAxelId].currentWeapon];
+					}
+					logger::log_format("[NetUpdate] Player: {} Switched to Weapon: `{}`", opponentAxelId, disp);
+					SwitchToWeaponIndex::original(weaponInv, 0, static_cast<CarsWeaponInventory::WeaponIndex>(axel::CONTEXT->vehicleStates[opponentAxelId].currentWeapon), false);
+				}
 
 				// Apply ActiveMoves state.
 				ActiveMoves::ActionState opponentState = static_cast<ActiveMoves::ActionState>(axel::CONTEXT->vehicleStates[opponentAxelId].actionState);
@@ -308,10 +425,9 @@ DefineReplacementHook(UpdateAIMgr) {
 				else if (opponentState == ActiveMoves::ActionState::BunnyHop) {
 					activeMoves->SetBunnyHopping(true, false);
 				}
+				// WIP: Handle Jump Tricking, Taunting, and Drift Wall Riding.
 
 				activeMoves->m_turboing = axel::CONTEXT->vehicleStates[opponentAxelId].isTurboing;
-
-				Physics_PhysicsMgr_TeleportRigidBody((*g_CollisionSystem) + 0x11D4, *reinterpret_cast<void**>(reinterpret_cast<std::uintptr_t>(vehicle) + 0x9CC), &transform, 1);
 			}
 		}
 
@@ -577,6 +693,12 @@ DefineInlineHook(PlayerSuspensionInit) {
 	}
 };
 
+DefineReplacementHook(DomainExpansion_MalevolentGoats) {
+	static unsigned int _fastcall callback(std::uintptr_t _this, std::uintptr_t edx, int playerId) {
+		return *reinterpret_cast<unsigned int*>(_this + std::clamp(playerId, 0, 3) * 4 + 0x28);
+	}
+};
+
 auto axel::ingame::install_hooks() -> void {
 	GetStartingGridLocForPlayer::install_at_ptr(0x004ea100);
 	SetStartingCarId::install_at_ptr(0x004ebc60);
@@ -590,11 +712,14 @@ auto axel::ingame::install_hooks() -> void {
 	*reinterpret_cast<std::uint32_t*>(0x00ec2a29 + 3) = reinterpret_cast<std::uintptr_t>(PLAYER_NAMES);
 
 	GetMaxPC::install_at_ptr(0x00554010);
+	SwitchToWeaponIndex::install_at_ptr(0x005c1b20);
+	PullTriggerHook::install_at_ptr(0x005b6f90);
 
 	// Player expansion dick:
-	// sunset::inst::nop(reinterpret_cast<void*>(0x004f2840), 5);
+	sunset::inst::nop(reinterpret_cast<void*>(0x004f2840), 5);
 	// Meridian::PlayerSuspsensionEventNode Hack
-	// PlayerSuspensionInit::install_at_ptr(0x0058fb63);
-	// expand_dong();
+	PlayerSuspensionInit::install_at_ptr(0x0058fb63);
+	expand_dong();
+	DomainExpansion_MalevolentGoats::install_at_ptr(0x00f875d0);
 	// Player expansion dick end!
 }

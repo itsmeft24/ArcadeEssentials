@@ -167,7 +167,8 @@ enum class CarsFrontEndScreen : int {
 #endif
 	Axel_Online = 39,
 	Axel_LobbyCreateOptions = 40,
-	Axel_LobbyJoin = 41,
+	Axel_LobbyShowList = 41,
+    Axel_EnterLobbyName = 42,
 };
 
 class CarsFrontEnd : public FrontEndLayer {

@@ -57,6 +57,9 @@ void axel::Context::OnRecieveLobbyList(LobbyMatchList_t* pLobbyMatchList) {
 void axel::Context::OnLobbyCreate(LobbyCreated_t* e) {
     switch (e->m_eResult) {
     case k_EResultOK:
+        if (lobbyCreateRequested) {
+            lobbyCreated = true;
+        }
         logger::log_format("[axel::Context::OnLobbyCreate] Successfully created lobby: {}!", e->m_ulSteamIDLobby);
         break;
     case k_EResultNoConnection:

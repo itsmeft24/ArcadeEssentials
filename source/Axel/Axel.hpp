@@ -32,11 +32,17 @@ namespace axel {
 
 		// Called on every `CarsFrontEnd::SetScreen` for which a foreign (non-vanilla) screen state is observed.
 		auto retrieve_options_list(CarsFrontEnd* _this, CarsFrontEndScreen screen) -> std::optional<std::string>;
+
+		auto get_lobby_descriptions() -> std::string;
+
+		auto get_lobby_name(int) -> std::string;
 	};
 
 	namespace ingame {
 		// Installs the necessary hooks for functionality in-game.
 		auto install_hooks() -> void;
+
+		auto fire_weapon(int attacker, int mainOrRear) -> void;
 	};
 
 	// Asks the network to pull a lobby list. Should be called once; continously call `received_lobby_list` after this to check if the lobby list is ready to use.
@@ -53,7 +59,7 @@ namespace axel {
 	// Consumes the lobby list from the global context.
 	inline auto consume_lobby_list() -> std::vector<CSteamID> {
 		std::vector<CSteamID> list = CONTEXT->lobbyList;
-		CONTEXT->lobbyList.clear();
+		// CONTEXT->lobbyList.clear(); FIXME
 		CONTEXT->lobbyListRequested = false;
 		CONTEXT->lobbyListReceived = false;
 		return list;
@@ -68,6 +74,17 @@ namespace axel {
 	// Checks if we've joined the lobby that we asked to earlier.
 	inline auto has_joined_lobby() -> bool {
 		return CONTEXT->lobbyJoinRequested && CONTEXT->lobbyJoinRequestFulfilled;
+	}
+
+	// Asks the network to create a lobby.
+	inline auto request_create() -> void {
+		SteamMatchmaking()->CreateLobby(k_ELobbyTypePublic, 10);
+		CONTEXT->lobbyCreateRequested = true;
+	}
+
+	// Checks if we've created the lobby that we asked to earlier.
+	inline auto has_created_lobby() -> bool {
+		return CONTEXT->lobbyCreateRequested && CONTEXT->lobbyCreated;
 	}
 
 	// Enables/Disables Axel.

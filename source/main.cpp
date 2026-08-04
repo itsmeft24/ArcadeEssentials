@@ -594,6 +594,54 @@ DefineReplacementHook(ExternalInterfaceHandler_Callback) {
 				HandleSetCurrResolution(movie, std::bit_cast<float>(reinterpret_cast<unsigned int*>(args)[2]));
 				return;
 			}
+#ifdef MP_STRATEGY_AXEL
+			// Axel_GetLobbyDescriptions / GetFreeplaySettingDescriptions
+			else if (_stricmp(method, "GetFreeplaySettingDescriptions") == 0) {
+				std::string descriptions = axel::ui::get_lobby_descriptions();
+				// Pass the list to the game through a Value.
+				GFxValue data(descriptions.data());
+				auto* inst = reinterpret_cast<std::uintptr_t*>(movie);
+				auto func = *reinterpret_cast<std::uint32_t(__thiscall**)(void*, GFxValue*)>(*inst + 200);
+				// Set the return value for the Flash function.
+				func(inst, &data);
+				return;
+			}
+			// Axel_GetLobbyPreview / GetFreeplaySettingValue
+			else if (_stricmp(method, "GetFreeplaySettingValue") == 0) {
+				const char* optionName = *reinterpret_cast<const char***>(args)[2];
+				if (_strnicmp(optionName, "Axel_LobbyOption", 16) == 0) {
+					GFxValue data("dih");
+					auto* inst = reinterpret_cast<std::uintptr_t*>(movie);
+					auto func = *reinterpret_cast<std::uint32_t(__thiscall**)(void*, GFxValue*)>(*inst + 200);
+					// Set the return value for the Flash function.
+					func(inst, &data);
+		}
+				else if (_strnicmp(optionName, "Axel_Lobby", 10) == 0) {
+					auto lobbyIndex = std::stoi(optionName + 10);
+					std::string value = std::format("{}/4", SteamMatchmaking()->GetNumLobbyMembers(axel::CONTEXT->lobbyList[lobbyIndex]));
+					// Pass the list to the game through a Value.
+					GFxValue data(value.data());
+					auto* inst = reinterpret_cast<std::uintptr_t*>(movie);
+					auto func = *reinterpret_cast<std::uint32_t(__thiscall**)(void*, GFxValue*)>(*inst + 200);
+					// Set the return value for the Flash function.
+					func(inst, &data);
+				}
+				return;
+			}
+			// Axel_GetLobbyIcon / GetSquadSeriesMode
+			else if (_stricmp(method, "GetSquadSeriesMode") == 0 && axel::online()) {
+				const char* optionName = *reinterpret_cast<const char***>(args)[2];
+				auto lobbyIndex = std::stoi(optionName + 10);
+				std::string value = axel::ui::get_lobby_name(lobbyIndex);
+				// Pass the list to the game through a Value.
+				GFxValue data(value.data());
+				auto* inst = reinterpret_cast<std::uintptr_t*>(movie);
+				auto func = *reinterpret_cast<std::uint32_t(__thiscall**)(void*, GFxValue*)>(*inst + 200);
+				// Set the return value for the Flash function.
+				func(inst, &data);
+				return;
+			}
+#endif
 		}
 		original(_this, edx, movie, method, args, arg_count);
 	}

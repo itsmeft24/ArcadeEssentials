@@ -57,6 +57,10 @@ namespace axel {
 		bool lobbyJoinRequested = false;
 		// Whether or not the lobby join request has been fulfilled.
 		bool lobbyJoinRequestFulfilled = false;
+		// Whether or not a lobby creation request was made.
+		bool lobbyCreateRequested = false;
+		// Whether or not a lobby creation request was fulfilled.
+		bool lobbyCreated = false;
 
 		// Whether or not each lobby member is ready to start the race.
 		std::array<bool, 10> isMemberReady = {};

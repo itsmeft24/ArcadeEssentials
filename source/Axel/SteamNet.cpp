@@ -47,14 +47,14 @@ void axel::SteamNet::send_routed_message_async(CSteamID recipient, const std::ve
 std::chrono::milliseconds axel::SteamNet::estimate_ping(CSteamID peer) {
     auto it = connections.find(peer);
     if (it == connections.end()) {
-        logger::log_format("[axel::SteamNet::estimate_ping_ms] Attempted to get ping for unknown peer {}!", peer.ConvertToUint64());
+        logger::log_format("[axel::SteamNet::estimate_ping] Attempted to get ping for unknown peer {}!", peer.ConvertToUint64());
         return std::chrono::milliseconds(0);
     }
 
     // We pass 0 and nullptr for the lane-specific arguments as we only want general connection stats.
     SteamNetConnectionRealTimeStatus_t status{};
     if (SteamNetworkingSockets()->GetConnectionRealTimeStatus(it->second, &status, 0, nullptr) != k_EResultOK) {
-        logger::log_format("[axel::SteamNet::estimate_ping_ms] Error: Failed to retrieve connection status for peer {}!", peer.ConvertToUint64());
+        logger::log_format("[axel::SteamNet::estimate_ping] Error: Failed to retrieve connection status for peer {}!", peer.ConvertToUint64());
         return std::chrono::milliseconds(0);
     }
 

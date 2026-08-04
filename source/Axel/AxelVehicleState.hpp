@@ -16,7 +16,7 @@ namespace axel {
 		int driftWallRideState = 0;
 		int tauntState = 0;
 
-		int currentWeapon = 0;
+		int currentWeapon = -1;
 
 		bool isTurboing = false;
 		bool isFiring = false;

@@ -17,6 +17,7 @@ namespace axel::message {
         VehicleStatePeriodic = 3,
         DoneLoading = 4,
         StartGame = 5,
+        WeaponFired = 6,
     };
 
     struct MessageHeader {
@@ -58,6 +59,19 @@ namespace axel::message {
                 sender,
                 recipient,
                 state
+            };
+            return ret;
+        }
+    };
+    
+    struct WeaponFiredPacket : public MessageHeader {
+        int mainOrRear;
+        static inline WeaponFiredPacket make(std::uint8_t sender, std::uint8_t recipient, int mainOrRear) {
+            WeaponFiredPacket ret {
+                MessageType::WeaponFired,
+                sender,
+                recipient,
+                mainOrRear
             };
             return ret;
         }
