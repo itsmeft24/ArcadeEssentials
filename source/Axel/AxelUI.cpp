@@ -70,7 +70,7 @@ DefineReplacementHook(SoftwareKeyboardHook) {
 			if (axel::CONTEXT->softwareKeyboardBuffer.length() >= 1) {
 				axel::CONTEXT->softwareKeyboardBuffer.pop_back();
 			}
-			Flash_Movie_CallFlashFunction((std::uintptr_t)movie, "SetKeyCode", 0, axel::CONTEXT->softwareKeyboardBuffer.data(), 0, 0.0f);
+			movie->CallFlashFunction("SetKeyCode", nullptr, axel::CONTEXT->softwareKeyboardBuffer.data(), 0, 0.0f);
 			return;
 		}
 
@@ -87,7 +87,7 @@ DefineReplacementHook(SoftwareKeyboardHook) {
 
 		axel::CONTEXT->softwareKeyboardBuffer += entered;
 
-		Flash_Movie_CallFlashFunction((std::uintptr_t)movie, "SetKeyCode", 0, axel::CONTEXT->softwareKeyboardBuffer.data(), 0, 0.0f);
+		movie->CallFlashFunction("SetKeyCode", nullptr, axel::CONTEXT->softwareKeyboardBuffer.data(), 0, 0.0f);
 	}
 };
 
@@ -138,6 +138,9 @@ auto axel::ui::install_hooks() -> void {
 	RightSideCSSHandleInputHook::install_at_ptr(0x004bc96d);
 
 	SwapCharacter::install_at_ptr(0x004cd0f0);
+
+	// Hack that allows the player to be sent directly to the CSS after an event.
+	sunset::inst::nop(reinterpret_cast<void*>(0x004c0db5), 2);
 }
 
 auto axel::ui::on_retract(CarsFrontEnd* _this) -> void {
@@ -204,7 +207,7 @@ auto axel::ui::update(CarsFrontEnd* _this) -> void {
 
 		std::string key = "menu_button_extra1";
 		key += SuffixForCT((*g_InputPtr)->GetController(0)->m_uiType);
-		Flash_Movie_CallFlashFunction(reinterpret_cast<std::uintptr_t>(_this->miniMenu->movie), "AddButton", 0, key.data(), "Axel_SwapSelection");
+		_this->miniMenu->movie->CallFlashFunction("AddButton", nullptr, key.data(), "Axel_SwapSelection");
 	}
 
 	if (axel::has_created_lobby()) {
@@ -220,7 +223,7 @@ auto axel::ui::update(CarsFrontEnd* _this) -> void {
 
 		std::string key = "menu_button_extra1";
 		key += SuffixForCT((*g_InputPtr)->GetController(0)->m_uiType);
-		Flash_Movie_CallFlashFunction(reinterpret_cast<std::uintptr_t>(_this->miniMenu->movie), "AddButton", 0, key.data(), "Axel_SwapSelection");
+		_this->miniMenu->movie->CallFlashFunction("AddButton", nullptr, key.data(), "Axel_SwapSelection");
 
 		SteamMatchmaking()->SetLobbyData(axel::CONTEXT->lobbyID, "name", axel::CONTEXT->softwareKeyboardBuffer.data());
 		SteamMatchmaking()->SetLobbyData(axel::CONTEXT->lobbyID, "is_axel", "true");
@@ -233,7 +236,7 @@ auto axel::ui::update(CarsFrontEnd* _this) -> void {
 
 	if (axel::CONTEXT->selectedCarChanged) {
 		if (RIGHT_SIDE_CSS != nullptr) {
-			Flash_Movie_CallFlashFunction(reinterpret_cast<std::uintptr_t>(RIGHT_SIDE_CSS), "RefreshSelectedCharacter", 0);
+			RIGHT_SIDE_CSS->CallFlashFunction("RefreshSelectedCharacter", nullptr);
 		}
 		axel::CONTEXT->selectedCarChanged = false;
 	}
@@ -278,10 +281,11 @@ auto axel::ui::on_confirm(CarsFrontEnd* _this, std::string_view selected_menu) -
 			(*g_GameProgressionManager)->m_unkIndex = -1;
 			(*g_GameProgressionManager)->m_settings.m_weaponsEnabled = true;
 			(*g_GameProgressionManager)->m_settings.m_friendlyFireType = 1;
-			_CarsFrontEnd_SetLevelAndUnk(_this, "TRACK_HOLOCARS_SKIDPAD");
-			_CarsFrontEnd_UnkHandleTrackLengthType(_this, "TRACK_HOLOCARS_SKIDPAD");
+			_CarsFrontEnd_SetLevelAndUnk(_this, "TRACK_A_RadiatorSprings");
+			_CarsFrontEnd_UnkHandleTrackLengthType(_this, "TRACK_A_RadiatorSprings");
 			(*g_GameProgressionManager)->SetAICarCount(0);
 			(*g_GameProgressionManager)->m_settings.m_lapCount = 1;
+			(*g_GameProgressionManager)->m_settings.m_maxLapCount = 1;
 			GameProgressionManager_SetMissionTimeByMode(*g_GameProgressionManager, false);
 		}
 	}
@@ -314,10 +318,11 @@ auto axel::ui::on_confirm(CarsFrontEnd* _this, std::string_view selected_menu) -
 			(*g_GameProgressionManager)->m_unkIndex = -1;
 			(*g_GameProgressionManager)->m_settings.m_weaponsEnabled = true;
 			(*g_GameProgressionManager)->m_settings.m_friendlyFireType = 1;
-			_CarsFrontEnd_SetLevelAndUnk(_this, "TRACK_HOLOCARS_SKIDPAD");
-			_CarsFrontEnd_UnkHandleTrackLengthType(_this, "TRACK_HOLOCARS_SKIDPAD");
+			_CarsFrontEnd_SetLevelAndUnk(_this, "TRACK_A_RadiatorSprings");
+			_CarsFrontEnd_UnkHandleTrackLengthType(_this, "TRACK_A_RadiatorSprings");
 			(*g_GameProgressionManager)->SetAICarCount(0);
 			(*g_GameProgressionManager)->m_settings.m_lapCount = 1;
+			(*g_GameProgressionManager)->m_settings.m_maxLapCount = 1;
 			GameProgressionManager_SetMissionTimeByMode(*g_GameProgressionManager, false);
 		}
 	}
@@ -382,6 +387,6 @@ auto axel::ui::load_lobby_screen_right() -> void {
 
 auto axel::ui::refresh_lobby_member_list() -> void {
 	if (RIGHT_SIDE_CSS != nullptr) {
-		Flash_Movie_CallFlashFunction(reinterpret_cast<std::uintptr_t>(RIGHT_SIDE_CSS), "RefreshLobbyMemberList", 0);
+		RIGHT_SIDE_CSS->CallFlashFunction("RefreshLobbyMemberList", nullptr);
 	}
 }

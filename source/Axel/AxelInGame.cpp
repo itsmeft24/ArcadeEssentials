@@ -193,6 +193,9 @@ DefineReplacementHook(ShufflePlayerControllersDown) {
 				GameEnv_SetWorldData(*g_GameEnv, defaultAvatar.data(), (*g_CarManager)->carInfos[carIdNum].name, *reinterpret_cast<int*>(*g_GameEnv + 0x6180));
 			}
 		}
+		// Hack that allows the player to be sent directly to the CSS after an event.
+		HistoryEntry entry = { .screen = CarsFrontEndScreen::CarSelect, .unknown = 0 };
+		Genie_List_HistoryEntry_AddHead(reinterpret_cast<std::uintptr_t>(&_this->history), reinterpret_cast<std::uintptr_t>(&entry));
 		/*
 		GameEnv_SetWorldData(*g_GameEnv, "DefaultAvatar", "McQueen", *reinterpret_cast<int*>(*g_GameEnv + 0x6180));
 		GameEnv_SetWorldData(*g_GameEnv, "DefaultAvatar2", "McQueen", *reinterpret_cast<int*>(*g_GameEnv + 0x6180));
@@ -230,6 +233,17 @@ DefineReplacementHook(SendAnimEvent) {
 			}
 		}
 		original(event, target, data);
+	}
+};
+
+
+DefineReplacementHook(MeridianChoHandleImpulse) {
+	static void __fastcall callback(std::uintptr_t _this, std::uintptr_t edx, void* link, void* element) {
+		Genie::String* choName = reinterpret_cast<Genie::String*>(_this + 0x48);
+		if (choName->data != nullptr) {
+			logger::log_format("[Meridian::ChoreographyNode::HandleImpulse] Cho Queued: {}", choName->data);
+		}
+		original(_this, edx, link, element);
 	}
 };
 
@@ -724,10 +738,10 @@ DefineReplacementHook(CarsHudGetTutorialButtonPrompt) {
 	}
 };
 */
-auto expand_dong() {
+auto install_cars_hud_bounds_checks() {
 	// `CarsHud::GetPlayerIndexFromMovie` oddly enough, checks if the index is > 10, instead of 4; That's very suspicious!
 	sunset::utils::set_permission(reinterpret_cast<void*>(0x00551c7b + 3), sizeof(char), sunset::utils::Perm::ExecuteReadWrite);
-	*reinterpret_cast<char*>(0x00551c7b + 3) = 5;
+	*reinterpret_cast<char*>(0x00551c7b + 3) = 4;
 
 	// Adds more bounds-checks to `CarsHud` functions.
 	CarsHudGetGuage::install_at_ptr(0x00552960);
@@ -755,7 +769,7 @@ DefineInlineHook(PlayerSuspensionInit) {
 	}
 };
 
-DefineReplacementHook(DomainExpansion_MalevolentGoats) {
+DefineReplacementHook(UnkPlayerStatRelated) {
 	static unsigned int _fastcall callback(std::uintptr_t _this, std::uintptr_t edx, int playerId) {
 		return *reinterpret_cast<unsigned int*>(_this + std::clamp(playerId, 0, 3) * 4 + 0x28);
 	}
@@ -777,18 +791,20 @@ auto axel::ingame::install_hooks() -> void {
 	SwitchToWeaponIndex::install_at_ptr(0x005c1b20);
 	PullTriggerHook::install_at_ptr(0x005b6f90);
 	SendAnimEvent::install_at_ptr(0x00f0f7a0);
+	MeridianChoHandleImpulse::install_at_ptr(0x00fa9fa0);
 
-	// Player expansion dick:
+	// Player Expansion (4 -> 10):
 	sunset::inst::nop(reinterpret_cast<void*>(0x004f2840), 5);
 	// Meridian::PlayerSuspsensionEventNode Hack
 	PlayerSuspensionInit::install_at_ptr(0x0058fb63);
-	expand_dong();
-	DomainExpansion_MalevolentGoats::install_at_ptr(0x00f875d0);
+	install_cars_hud_bounds_checks();
+	// StatsManager Hack
+	UnkPlayerStatRelated::install_at_ptr(0x00f875d0);
+	// Player Expansion End!
 
+	// Makes all teams selectable.
 	sunset::utils::set_permission(reinterpret_cast<void*>(0x004cd28e + 3), sizeof(char*), sunset::utils::Perm::ExecuteReadWrite);
 	*reinterpret_cast<const char**>(0x004cd28e + 3) = "TEAM_RED,TEAM_BLUE,TEAM_GREEN,TEAM_YELLOW";
-	
 	sunset::utils::set_permission(reinterpret_cast<void*>(0x004cd2c9 + 3), sizeof(char*), sunset::utils::Perm::ExecuteReadWrite);
 	*reinterpret_cast<const char**>(0x004cd2c9 + 3) = "TEAM_SOLO,TEAM_RED,TEAM_BLUE,TEAM_GREEN,TEAM_YELLOW";
-	// Player expansion dick end!
 }

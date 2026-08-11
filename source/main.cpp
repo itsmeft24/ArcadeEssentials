@@ -43,14 +43,14 @@
 #pragma comment(lib, "sdkencryptedappticket.lib")
 #endif
 
-void __fastcall init_clearance_level_data(std::uintptr_t unk) {
+void __fastcall init_clearance_level_data(MiniMenu* _this) {
 	auto iVar2 = FUN_00f675d0(*reinterpret_cast<void**>(0x0192c5ec), "Stat_SPY_POINTS", 1);
 	auto local_c = FUN_00f66d60(*reinterpret_cast<void**>(0x0192c5ec), iVar2);
 	iVar2 = FUN_00f675d0(*reinterpret_cast<void**>(0x0192c5ec), "Stat_CLEARANCE_LEVEL", 1);
 	auto local_8 = FUN_00f66d60(*reinterpret_cast<void**>(0x0192c5ec), iVar2);
 
 	int local_14 = 0, local_18 = 0;
-	UnkExcelDataBase_GetUnk3(*reinterpret_cast<void**>(0x018ae110), local_8, &local_14, &local_18);
+	GameStructureManager_GetUnk3(*reinterpret_cast<void**>(0x018ae110), local_8, &local_14, &local_18);
 	float local_10 = static_cast<float>(local_c - local_14) / static_cast<float>(local_18 - local_14);
 	if (0.0 <= local_10) {
 		if (1.0 < local_10) {
@@ -67,7 +67,7 @@ void __fastcall init_clearance_level_data(std::uintptr_t unk) {
 		local_8 = 6;
 	}
 
-	Flash_Movie_CallFlashFunction(*reinterpret_cast<std::uintptr_t*>(unk), "SetClearanceLevelData", 0, static_cast<double>(static_cast<int>(local_8)), static_cast<double>(local_10), static_cast<double>(local_c));
+	_this->movie->CallFlashFunction("SetClearanceLevelData", nullptr, static_cast<double>(static_cast<int>(local_8)), static_cast<double>(local_10), static_cast<double>(local_c));
 }
 
 DefineInlineHook(SetInitialScreenState) {
@@ -78,22 +78,20 @@ DefineInlineHook(SetInitialScreenState) {
 };
 
 DefineReplacementHook(CarsFrontEnd_SetScreen) {
-	static void __fastcall callback(void* _this, uintptr_t edx, CarsFrontEndScreen screen, char* miniMenuTitle, unsigned char updateHistory) {
+	static void __fastcall callback(CarsFrontEnd* _this, uintptr_t edx, CarsFrontEndScreen screen, const char* miniMenuTitle, bool updateHistory) {
 #ifdef _DEBUG
-		if (unk_name != nullptr) {
-			logger::log_format("[CarsFrontEnd::SetScreen] {}, {}, {}", screen, miniMenuTitle, updateHistory);
+		if (miniMenuTitle != nullptr) {
+			logger::log_format("[CarsFrontEnd::SetScreen] {}, {}, {}", static_cast<int>(screen), miniMenuTitle, updateHistory);
 		}
 		else {
-			logger::log_format("[CarsFrontEnd::SetScreen] {}, nullptr, {}", screen, updateHistory);
+			logger::log_format("[CarsFrontEnd::SetScreen] {}, nullptr, {}", static_cast<int>(screen), updateHistory);
 		}
 #endif
-		CarsFrontEndScreen menu_state = *(reinterpret_cast<CarsFrontEndScreen*>(reinterpret_cast<std::uintptr_t>(_this) + 0xA8));
-		if (menu_state == CarsFrontEndScreen::SaveSlots) {
-			std::uintptr_t* mini_menu = *(reinterpret_cast<std::uintptr_t**>(reinterpret_cast<std::uintptr_t>(_this) + 0xe4));
-			if (mini_menu != nullptr) {
-				if (*mini_menu != 0) {
+		if (_this->current.screen == CarsFrontEndScreen::SaveSlots) {
+			if (_this->miniMenu != nullptr) {
+				if (_this->miniMenu->movie != 0) {
 					logger::log_format("[CarsFrontEnd::SetScreen] Removing last button.");
-					Flash_Movie_CallFlashFunction(*mini_menu, "RemoveLastButton", 0);
+					_this->miniMenu->movie->CallFlashFunction("RemoveLastButton", nullptr);
 				}
 			}
 		}
@@ -108,9 +106,8 @@ DefineReplacementHook(CarsFrontEnd_SetScreen) {
 
 DefineReplacementHook(CarsFrontEnd_GoBack) {
 	static void __fastcall callback(CarsFrontEnd* _this) {
-		auto value = *reinterpret_cast<int*>(*reinterpret_cast<std::uintptr_t*>(reinterpret_cast<std::uintptr_t>(_this) + 0x3FC) + 8);
 #ifdef _DEBUG
-		logger::log_format("[CarsFrontEnd::GoBack] Going back to {}...", value);
+		logger::log_format("[CarsFrontEnd::GoBack] Going back to {}...", static_cast<int>(_this->history.m_pHead->value.screen));
 #endif
 #ifdef MP_STRATEGY_AXEL
 		axel::ui::on_retract(_this);
@@ -146,18 +143,16 @@ int get_num_unlocked_controllers() {
 }
 
 DefineReplacementHook(OnConfirmHook) {
-	static void __fastcall callback(CarsFrontEnd* _this, std::uintptr_t edx, const char* _selected_menu, std::uintptr_t unk_menu) {
+	static void __fastcall callback(CarsFrontEnd* _this, std::uintptr_t edx, const char* _selected_menu, Flash::Movie* unk_menu) {
 		std::string selected_menu = _selected_menu;
 		logger::log_format("[CarsFrontEnd::OnConfirm] {}", selected_menu);
-		*(reinterpret_cast<std::int32_t*>(reinterpret_cast<std::uintptr_t>(_this) + 0x7CC)) += 1;
-		if (std::fabs(std::fmod(static_cast<double>(*reinterpret_cast<std::int32_t*>(reinterpret_cast<std::uintptr_t>(_this) + 0x7CC)), 3.0)) < 1E-07) {
-			*(reinterpret_cast<const char**>(reinterpret_cast<std::uintptr_t>(_this) + 0x598)) = "Click_Select";
+		_this->field687_0x7cc += 1;
+		if (std::fabs(std::fmod(static_cast<double>(_this->field687_0x7cc), 3.0)) < 1E-07) {
+			_this->field152_0x598 = "Click_Select";
 		}
 		bool should_set_screen = false;
 		bool should_play_item_selected = true;
-
-		CarsFrontEndScreen screen = *(reinterpret_cast<CarsFrontEndScreen*>(reinterpret_cast<std::uintptr_t>(_this) + 0xA8));
-		switch (screen) {
+		switch (_this->current.screen) {
 		case CarsFrontEndScreen::ExitToTitleScreen:
 			*reinterpret_cast<std::uint8_t*>(g_PopupCallback + 0x131) = 1;
 			if (selected_menu == "SharedText_Yes") {
@@ -184,8 +179,8 @@ DefineReplacementHook(OnConfirmHook) {
 				PersistentData_SetGlobal(*g_PersistentData, "MultiPlayer", saveMp);
 				PersistentData_SetGlobal(*g_PersistentData, "ScreenFormat", saveScreenFormat);
 
-				std::uint32_t array[2] = { 1, 0 };
-				FUN_00ba0870(reinterpret_cast<std::uintptr_t>(_this) + 0x3e8, reinterpret_cast<std::uintptr_t>(&array));
+				HistoryEntry entry = { .screen = CarsFrontEndScreen::ExitToTitleScreen, .unknown = 0 };
+				Genie_List_HistoryEntry_AddHead(reinterpret_cast<std::uintptr_t>(&_this->history), reinterpret_cast<std::uintptr_t>(&entry));
 			}
 			should_play_item_selected = false;
 			break;
@@ -205,7 +200,7 @@ DefineReplacementHook(OnConfirmHook) {
 			// If theres no controller locked to player 0, we want to lock player 0 to whoever pressed START at the title screen (due to the above hack this should always be zero anyway).
 			if (!(*g_InputPtr)->ControllerLocked(0)) {
 				(*g_InputPtr)->LockPlayerToController(0, start_controller);
-				*reinterpret_cast<int*>(reinterpret_cast<std::uintptr_t>(_this) + 0x7DC) = start_controller;
+				_this->controllerIndex[0] = start_controller;
 			}
 			// reinterpret_cast<std::uint8_t*>(reinterpret_cast<std::uintptr_t>(_this) + 0xOFFSET)) = 1;
 			// reinterpret_cast<std::uint32_t*>(reinterpret_cast<std::uintptr_t>(_this) + 0xOFFSET)) = CMasterTimer_GetOSTime();
@@ -214,7 +209,7 @@ DefineReplacementHook(OnConfirmHook) {
 			FUN_0080df70(*reinterpret_cast<std::uintptr_t*>(0x018d323c));
 			*reinterpret_cast<bool*>(*g_PopupCallback + 0x10C) = true;
 			_CarsFrontEnd_SetScreen(_this, CarsFrontEndScreen::SaveFileLoading, nullptr, true);
-			*reinterpret_cast<std::uint8_t*>(reinterpret_cast<std::uintptr_t>(_this) + 0x424) = static_cast<std::uint8_t>(*reinterpret_cast<std::uint32_t*>(reinterpret_cast<std::uintptr_t>(*g_GameProgressionManager) + 0x108));
+			_this->clearanceLevelIndex = static_cast<std::uint8_t>(*reinterpret_cast<std::uint32_t*>(reinterpret_cast<std::uintptr_t>(*g_GameProgressionManager) + 0x108));
 			should_play_item_selected = false;
 			}
 			break;
@@ -225,7 +220,7 @@ DefineReplacementHook(OnConfirmHook) {
 				index = 0;
 			}
 			*reinterpret_cast<int*>(*g_SaveGame + 0x60) = index;
-			if (*reinterpret_cast<std::uint8_t*>(reinterpret_cast<std::uintptr_t>(_this) + 0x4C + index * 24) == 0) {
+			if (!_this->saveSlots[index].isFilled) {
 				CSaveGame_ClearLoadedData(*g_SaveGame);
 				std::uintptr_t* g_GameSettings = *reinterpret_cast<std::uintptr_t**>(0x0192b8a8);
 				auto func = *reinterpret_cast<void(__thiscall**)(std::uintptr_t*)>(*g_GameSettings + 0xC);
@@ -292,8 +287,8 @@ DefineReplacementHook(OnConfirmHook) {
 				_CarsFrontEnd_SetScreen(_this, CarsFrontEndScreen::Axel_Online, _selected_menu, true);
 			}
 #endif
-			if (*reinterpret_cast<std::uintptr_t*>(reinterpret_cast<std::uintptr_t>(_this) + 0xE4) != 0) {
-				init_clearance_level_data(*reinterpret_cast<std::uintptr_t*>(reinterpret_cast<std::uintptr_t>(_this) + 0xE4));
+			if (_this->miniMenu != nullptr) {
+				init_clearance_level_data(_this->miniMenu);
 			}
 			break;
 
@@ -302,15 +297,15 @@ DefineReplacementHook(OnConfirmHook) {
 			if (selected_menu.size() > 15) {
 				char number = selected_menu[15];
 				if (number < '0' || number > '9') {
-					*reinterpret_cast<std::int8_t*>(reinterpret_cast<std::uintptr_t>(_this) + 0x424) = 0;
+					_this->clearanceLevelIndex = 0;
 				}
 				else {
-					*reinterpret_cast<std::int8_t*>(reinterpret_cast<std::uintptr_t>(_this) + 0x424) = number - '0';
+					_this->clearanceLevelIndex = number - '0';
 				}
 				_CarsFrontEnd_SetScreen(_this, CarsFrontEndScreen::StoryMissions_MissionSelect, _selected_menu, true);
 			}
 			else {
-				*reinterpret_cast<std::int8_t*>(reinterpret_cast<std::uintptr_t>(_this) + 0x424) = 0;
+				_this->clearanceLevelIndex = 0;
 				_CarsFrontEnd_SetScreen(_this, CarsFrontEndScreen::StoryMissions_MissionSelect, _selected_menu, true);
 			}
 		}
@@ -318,16 +313,15 @@ DefineReplacementHook(OnConfirmHook) {
 
 		case CarsFrontEndScreen::StoryMissions_MissionSelect:
 		{
-			int unk_format_var = 0;
+			int mission_index = 0;
 			if (selected_menu[0] == 'S') {
 				(*g_GameProgressionManager)->m_unkIndex = 0;
 			}
 			else {
 				(*g_GameProgressionManager)->m_unkIndex = -1;
-				unk_format_var = std::atoi(_selected_menu);
+				mission_index = std::atoi(_selected_menu);
 			}
-			int8_t unk_story_mission_index = *reinterpret_cast<std::int8_t*>(reinterpret_cast<std::uintptr_t>(_this) + 0x424);
-			*reinterpret_cast<char**>(reinterpret_cast<std::uintptr_t>(_this) + 0x414) = (*g_GameProgressionManager)->FormatStoryMission(unk_story_mission_index, unk_format_var);
+			_this->missionIdStr2 = (*g_GameProgressionManager)->FormatStoryMission(_this->clearanceLevelIndex, mission_index);
 			_CarsFrontEnd_SetScreen(_this, CarsFrontEndScreen::StoryMissions_MissionDetails, nullptr, true);
 		}
 		break;
@@ -355,9 +349,8 @@ DefineReplacementHook(OnConfirmHook) {
 				_CarsFrontEnd_SetScreen(_this, CarsFrontEndScreen::BadgeMenu_Badges, _selected_menu, true);
 				oct_name = "ui/badges.oct";
 			}
-			void* engine_texture_loader = *reinterpret_cast<void**>(0x0192e194);
-			if (*reinterpret_cast<void**>(reinterpret_cast<std::uintptr_t>(_this) + 0xCC) == nullptr) {
-				*reinterpret_cast<void**>(reinterpret_cast<std::uintptr_t>(_this) + 0xCC) = Flash_EngineTextureLoader_LoadTextureSet(engine_texture_loader, oct_name, false, 0);
+			if (_this->badgeIcons == nullptr) {
+				_this->badgeIcons = reinterpret_cast<Flash::EngineTextureSet*>(Flash_EngineTextureLoader_LoadTextureSet(*reinterpret_cast<void**>(0x0192e194), oct_name, false, 0));
 			}
 			should_play_item_selected = false;
 		}
@@ -396,13 +389,13 @@ DefineReplacementHook(OnConfirmHook) {
 				char description[512] = {};
 				char* description_format = CTranslator_Translate(reinterpret_cast<void*>(0x0192674c), description_localization_label.data, true);
 				sprintf_s(description, description_format, static_cast<int>(unk6));
-				if (screen == CarsFrontEndScreen::BadgeMenu_Badges) {
+				if (_this->current.screen == CarsFrontEndScreen::BadgeMenu_Badges) {
 					unk6 = -1.0;
 				}
 				if (unk6 < unk5) {
 					unk5 = unk6;
 				}
-				Flash_Movie_CallFlashFunction(unk_menu, "SetBadgeInfo", 0, localization_label.data, description, static_cast<double>(unk5), static_cast<double>(unk6), buffer);
+				unk_menu->CallFlashFunction("SetBadgeInfo", nullptr, localization_label.data, description, static_cast<double>(unk5), static_cast<double>(unk6), buffer);
 				should_play_item_selected = false;
 			}
 			break;
@@ -426,7 +419,7 @@ DefineReplacementHook(OnConfirmHook) {
 			else {
 				_CarsFrontEnd_SetLevelAndUnk(_this, _selected_menu);
 			}
-			if (screen == CarsFrontEndScreen::MainMenu_MissionSelect_SquadSeries) {
+			if (_this->current.screen == CarsFrontEndScreen::MainMenu_MissionSelect_SquadSeries) {
 				_CarsFrontEnd_SetScreen(_this, CarsFrontEndScreen::MissionSettings_SquadSeries, nullptr, true);
 			}
 			else {
@@ -442,10 +435,38 @@ DefineReplacementHook(OnConfirmHook) {
 		case CarsFrontEndScreen::MissionSettings_SquadSeries:
 			{
 				GameProgressionManager_SetMissionTimeByMode(*g_GameProgressionManager, false);
-				GameProgressionManager_FUN_004ebaf0(*g_GameProgressionManager, *(reinterpret_cast<int*>(reinterpret_cast<std::uintptr_t>(_this) + 0x46C)));
+				GameProgressionManager_SetSquadSeriesEntryToDefaults(*g_GameProgressionManager, _this->field73_0x46c);
+				Genie::List<HistoryEntry>::Node* node = _this->history.m_pHead;
+				while (node != nullptr && node->value.screen != CarsFrontEndScreen::CustomSquadSeries) {
+					_this->history.RemoveHead();
+					char* dest = _this->miniMenuHistoryText.data;
+					node = _this->history.m_pHead;
+					char* suffix = strrchr(dest, '-');
+					int prefix_len = -1;
+					if (suffix != nullptr) {
+						prefix_len = suffix - dest;
+					}
+					_this->miniMenuHistoryText.Delete(prefix_len, _this->miniMenuHistoryText.Length() - prefix_len);
+				}
+				char* dest = _this->miniMenuHistoryText.data;
+				char* suffix = strrchr(dest, '-');
+				int prefix_len = -1;
+				if (suffix != nullptr) {
+					prefix_len = suffix - dest;
+				}
+				std::uintptr_t result[10] = {};
+				void* ppvVar6 = (void*)FUN_0060ee20(reinterpret_cast<std::uintptr_t>(&_this->miniMenuHistoryText), &result, _this->miniMenuHistoryText.Length() - (prefix_len + 1));
+				FUN_00613000(reinterpret_cast<std::uintptr_t>(&_this->miniMenuTitleText), ppvVar6);
+				Genie_String_Destructor(&result);
+				_this->miniMenuHistoryText.Delete(prefix_len, _this->miniMenuHistoryText.Length() - prefix_len);
+				_this->history.RemoveHead();
+				_CarsFrontEnd_SetScreen(_this, CarsFrontEndScreen::CustomSquadSeries, "FE_MT_SquadSeries", false);
+				/*
+				GameProgressionManager_SetMissionTimeByMode(*g_GameProgressionManager, false);
+				GameProgressionManager_SetSquadSeriesEntryToDefaults(*g_GameProgressionManager, _this->field73_0x46c);				
 				std::uintptr_t local_34 = *(reinterpret_cast<std::uintptr_t*>(reinterpret_cast<std::uintptr_t>(_this) + 0x3FC));
 				while (local_34 != 0 && *reinterpret_cast<CarsFrontEndScreen*>(local_34 + 8) != CarsFrontEndScreen::CustomSquadSeries) {
-					FUN_00ef3a30(reinterpret_cast<std::uintptr_t>(_this) + 0x3E8);
+					Genie_List_HistoryEntry_RemoveHead(reinterpret_cast<std::uintptr_t>(_this) + 0x3E8);
 					char* dest = *reinterpret_cast<char**>(reinterpret_cast<std::uintptr_t>(_this) + 0x408);
 					local_34 = *(reinterpret_cast<std::uintptr_t*>(reinterpret_cast<std::uintptr_t>(_this) + 0x3FC));
 					char* suffix = strrchr(dest, '-');
@@ -453,7 +474,7 @@ DefineReplacementHook(OnConfirmHook) {
 					if (suffix != nullptr) {
 						prefix_len = suffix - dest;
 					}
-					FUN_0060e7d0(reinterpret_cast<std::uintptr_t>(_this) + 0x408, prefix_len, *reinterpret_cast<std::uintptr_t*>(*reinterpret_cast<std::uintptr_t*>(reinterpret_cast<std::uintptr_t>(_this) + 0x408) - 0xC) - prefix_len);
+					Genie_String_Delete(reinterpret_cast<std::uintptr_t>(_this) + 0x408, prefix_len, *reinterpret_cast<std::uintptr_t*>(*reinterpret_cast<std::uintptr_t*>(reinterpret_cast<std::uintptr_t>(_this) + 0x408) - 0xC) - prefix_len);
 				}
 				char* dest = *reinterpret_cast<char**>(reinterpret_cast<std::uintptr_t>(_this) + 0x408);
 				char* suffix = strrchr(dest, '-');
@@ -465,19 +486,17 @@ DefineReplacementHook(OnConfirmHook) {
 				void* ppvVar6 = (void*)FUN_0060ee20(reinterpret_cast<std::uintptr_t>(_this) + 0x408, &result, *reinterpret_cast<std::uintptr_t*>(*reinterpret_cast<std::uintptr_t*>(reinterpret_cast<std::uintptr_t>(_this) + 0x408) - 0xC) - (prefix_len + 1));
 				FUN_00613000(reinterpret_cast<std::uintptr_t>(_this) + 0x40C, ppvVar6);
 				Genie_String_Destructor(&result);
-				FUN_0060e7d0(reinterpret_cast<std::uintptr_t>(_this) + 0x408, prefix_len, *reinterpret_cast<std::uintptr_t*>(*reinterpret_cast<std::uintptr_t*>(reinterpret_cast<std::uintptr_t>(_this) + 0x408) - 0xC) - prefix_len);
-				FUN_00ef3a30(reinterpret_cast<std::uintptr_t>(_this) + 0x3E8);
+				Genie_String_Delete(reinterpret_cast<std::uintptr_t>(_this) + 0x408, prefix_len, *reinterpret_cast<std::uintptr_t*>(*reinterpret_cast<std::uintptr_t*>(reinterpret_cast<std::uintptr_t>(_this) + 0x408) - 0xC) - prefix_len);
+				Genie_List_HistoryEntry_RemoveHead(reinterpret_cast<std::uintptr_t>(_this) + 0x3E8);
 				_CarsFrontEnd_SetScreen(_this, CarsFrontEndScreen::CustomSquadSeries, "FE_MT_SquadSeries", false);
+				*/
 			}
 			break;
 
 		case CarsFrontEndScreen::CustomSquadSeries:
-			{
-				int index = std::atoi(_selected_menu);
-				*(reinterpret_cast<int*>(reinterpret_cast<std::uintptr_t>(_this) + 0x46C)) = index;
-				GameProgressionManager_FUN_004ebab0(*g_GameProgressionManager, index);
-				_CarsFrontEnd_SetScreen(_this, CarsFrontEndScreen::MainMenu_CustomMissions_SquadSeries, nullptr, true);
-			}
+			_this->field73_0x46c = std::atoi(_selected_menu);
+			GameProgressionManager_FUN_004ebab0(*g_GameProgressionManager, _this->field73_0x46c);
+			_CarsFrontEnd_SetScreen(_this, CarsFrontEndScreen::MainMenu_CustomMissions_SquadSeries, nullptr, true);
 			break;
 
 		case CarsFrontEndScreen::MissionSettings:
@@ -487,7 +506,7 @@ DefineReplacementHook(OnConfirmHook) {
 
 		case CarsFrontEndScreen::GarageConnect:
 			if (_stricmp(_selected_menu, "DLC_Connect") == 0) {
-				*(reinterpret_cast<int*>(reinterpret_cast<std::uintptr_t>(_this) + 0x800)) = 1;
+				_this->field699_0x800 = 1;
 			}
 			should_play_item_selected = false;
 			break;
@@ -497,13 +516,10 @@ DefineReplacementHook(OnConfirmHook) {
 
 		case CarsFrontEndScreen::MainMenu_Garage:
 			if (selected_menu.starts_with("CAR_")) {
-				void* dest = (reinterpret_cast<void*>(reinterpret_cast<std::uintptr_t>(_this) + 0x114));
-				Genie_String_Assign(dest, _selected_menu);
+				Genie_String_Assign(&_this->frontendFlashFunctions.unknown1, _selected_menu);
 				_CarsFrontEnd_SetScreen(_this, CarsFrontEndScreen::GarageDetails, nullptr, true);
 			}
 			should_play_item_selected = false;
-			*(reinterpret_cast<float*>(reinterpret_cast<std::uintptr_t>(_this) + 0x7A4)) = 16.0f; // FIXME
-			*(reinterpret_cast<float*>(reinterpret_cast<std::uintptr_t>(_this) + 0x7A8)) = 8.0f; // FIXME
 			break;
 
 		default:
@@ -524,10 +540,9 @@ DefineReplacementHook(OnConfirmHook) {
 			PersistentData_SetGlobal(*g_PersistentData, "ScreenFormat", locked_controllers > 4 ? 1 : locked_controllers);
  			_CarsFrontEnd_SetScreen(_this, CarsFrontEndScreen::CarSelect, nullptr, true);
 		}
-		std::uintptr_t movie = *(reinterpret_cast<std::uintptr_t*>(reinterpret_cast<std::uintptr_t>(_this) + 0xbc));
-		if (movie != 0 && should_play_item_selected) {
-			Flash_Movie_CallFlashFunction(movie, "ItemSelected", nullptr);
-			*(reinterpret_cast<std::uint8_t*>(reinterpret_cast<std::uintptr_t>(_this) + 0xC0)) = 1;
+		if (_this->backAnim != nullptr && should_play_item_selected) {
+			_this->backAnim->CallFlashFunction("ItemSelected", nullptr);
+			_this->backAnimVisible = true;
 		}
 		return;
 
@@ -1208,29 +1223,29 @@ DefineInlineHook(AdjustScaleformViewport) {
 };
 
 DefineReplacementHook(MiniMenuAddButton) {
-	static void __fastcall callback(std::uintptr_t* _this, std::uintptr_t edx, const char* icon_key, const char* label_key) {
-		if (*_this != 0) {
+	static void __fastcall callback(MiniMenu* _this, std::uintptr_t edx, const char* icon_key, const char* label_key) {
+		if (_this->movie != nullptr) {
 			std::string key = icon_key;
 			key += SuffixForCT((*g_InputPtr)->GetController(0)->m_uiType);
 #ifdef _DEBUG
 			logger::log_format("[MiniMenu::AddButton] Added button: {}, {}.", key.data(), label_key);
 #endif
-			Flash_Movie_CallFlashFunction(*_this, "AddButton", 0, key.data(), label_key);
+			_this->movie->CallFlashFunction("AddButton", nullptr, key.data(), label_key);
 		}
 	}
 };
 
 DefineReplacementHook(MiniMenuShowTite) {
-	static void __fastcall callback(std::uintptr_t * _this) {
-		if (*_this != 0) {
-			Flash_Movie_CallFlashFunction(*_this, "ShowTitle", 0);
+	static void __fastcall callback(MiniMenu* _this) {
+		if (_this->movie != nullptr) {
+			_this->movie->CallFlashFunction("ShowTitle", nullptr);
 		}
 	}
 };
 
 DefineReplacementHook(MiniMenuResetButtons) {
-	static void __fastcall callback(std::uintptr_t * _this) {
-		if (*_this != 0) {
+	static void __fastcall callback(MiniMenu* _this) {
+		if (_this->movie != nullptr) {
 #ifdef _DEBUG
 			logger::log_format("[MiniMenu::ResetButtons] Removed all buttons.");
 			logger::log_format("[MiniMenu::ResetButtons] Added `menu_button_main`, `Scn_Select`.");
@@ -1241,34 +1256,34 @@ DefineReplacementHook(MiniMenuResetButtons) {
 			main += SuffixForCT((*g_InputPtr)->GetController(0)->m_uiType);
 			back_cancel += SuffixForCT((*g_InputPtr)->GetController(0)->m_uiType);
 
-			Flash_Movie_CallFlashFunction(*_this, "RemoveAllButtons", 0);
-			Flash_Movie_CallFlashFunction(*_this, "AddButton", 0, main.data(), "Scn_Select");
-			Flash_Movie_CallFlashFunction(*_this, "AddButton", 0, back_cancel.data(), "SharedText_Back");
+			_this->movie->CallFlashFunction("RemoveAllButtons", nullptr);
+			_this->movie->CallFlashFunction("AddButton", nullptr, main.data(), "Scn_Select");
+			_this->movie->CallFlashFunction("AddButton", nullptr, back_cancel.data(), "SharedText_Back");
 		}
 	}
 };
 
 DefineReplacementHook(MiniMenuSwapFirstButton) {
-	static void __fastcall callback(std::uintptr_t * _this, std::uintptr_t edx, char* icon_key, const char* label_key) {
-		if (*_this != 0) {
+	static void __fastcall callback(MiniMenu* _this, std::uintptr_t edx, char* icon_key, const char* label_key) {
+		if (_this->movie != nullptr) {
 			std::string key = icon_key;
 			key += SuffixForCT((*g_InputPtr)->GetController(0)->m_uiType);
-			Flash_Movie_CallFlashFunction(*_this, "SwapFirstButton", 0, key.data(), label_key);
+			_this->movie->CallFlashFunction("SwapFirstButton", nullptr, key.data(), label_key);
 		}
 	}
 };
 
 DefineInlineHook(AddButtons) {
 	static void _cdecl callback(sunset::InlineCtx & ctx) {
-		std::uintptr_t movie = **reinterpret_cast<std::uintptr_t**>(ctx.ebp.unsigned_integer - 0xc);
+		Flash::Movie* movie = **reinterpret_cast<Flash::Movie***>(ctx.ebp.unsigned_integer - 0xc);
 
 		std::string main = "menu_button_main";
 		std::string back_cancel = "menu_button_back-cancel";
 		main += SuffixForCT((*g_InputPtr)->GetController(0)->m_uiType);
 		back_cancel += SuffixForCT((*g_InputPtr)->GetController(0)->m_uiType);
 
-		Flash_Movie_CallFlashFunction(movie, "AddButton", 0, main.data(), "Scn_Select");
-		Flash_Movie_CallFlashFunction(movie, "AddButton", 0, back_cancel.data(), "SharedText_Back");
+		movie->CallFlashFunction("AddButton", nullptr, main.data(), "Scn_Select");
+		movie->CallFlashFunction("AddButton", nullptr, back_cancel.data(), "SharedText_Back");
 	}
 };
 
@@ -1731,15 +1746,15 @@ DefineReplacementHook(CarsFrontEnd_ShowControllerPull_HandleMessage) {
 					if (controller->Connected() && udata->type == 2) {
 						if (_this->m_reference->primaryMovie != nullptr) {
 							if (isMp) {
-								Flash_Movie_CallFlashFunction(reinterpret_cast<std::uintptr_t>(_this->m_reference->primaryMovie), "SetAutoDriftButton", 0);
+								_this->m_reference->primaryMovie->CallFlashFunction("SetAutoDriftButton", nullptr);
 							}
 							else if (_this->m_reference->current.screen == CarsFrontEndScreen::CarSelect) {
-								Flash_Movie_CallFlashFunction(reinterpret_cast<std::uintptr_t>(_this->m_reference->primaryMovie), "UpdateAutoMan", 0);
+								_this->m_reference->primaryMovie->CallFlashFunction("UpdateAutoMan", nullptr);
 							}
 						}
 
 						if (_this->m_reference->miniMenu != nullptr && index == 0) {
-							Flash_Movie_CallFlashFunction(reinterpret_cast<std::uintptr_t>(_this->m_reference->miniMenu->movie), "SwapButtons", 0, SuffixForCT(controller->m_uiType).data());
+							_this->m_reference->miniMenu->movie->CallFlashFunction("SwapButtons", nullptr, SuffixForCT(controller->m_uiType).data());
 						}
 					}
 				}
@@ -1760,7 +1775,7 @@ DefineReplacementHook(ErrorPopup_HideControllerPullMessage_HandleMessage) {
 				CarsControlMapper* ccm = Cars2VehicleDBlock::Get(*avatar)->m_carsControlMapper;
 				ccm->m_driver = (*g_InputPtr)->GetController(udata->playerIndex);
 				if (ccm->m_driver != nullptr) {
-					Flash_Movie_CallFlashFunction(reinterpret_cast<std::uintptr_t>((*g_CarsHud)->hud[udata->playerIndex]->m_movie), "SwapButtons", 0, SuffixForCT(ccm->m_driver->m_uiType).data());
+					(*g_CarsHud)->hud[udata->playerIndex]->m_movie->CallFlashFunction("SwapButtons", nullptr, SuffixForCT(ccm->m_driver->m_uiType).data());
 					ccm->SwitchControlScheme(XMLNameForCT(ccm->m_driver->m_uiType).data());
 				}
 				(*g_RaceManager)->UpdateRacerControlContexts();

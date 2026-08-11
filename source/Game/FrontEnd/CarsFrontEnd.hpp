@@ -2,6 +2,7 @@
 #include "../Scaleform/Wrapper/Layer.hpp"
 #include "../Scaleform/Wrapper/Movie.hpp"
 #include "../Scaleform/Wrapper/FlashControlMapper.hpp"
+#include "../DynamicArray.hpp"
 #include "../Genie/List.hpp"
 #include "../Genie/Array.hpp"
 #include "../Genie/String.hpp"
@@ -176,19 +177,39 @@ struct HistoryEntry {
     unsigned int unknown;
 };
 
+struct FrontEndCarActor {
+    char reserved[0x60];
+};
+
+struct CarsFrontEndActorMan {
+    FrontEndCarActor* frontEndCarActors;
+    unsigned int unknown;
+    int unknown2;
+    float unknown3;
+    unsigned int unknown4;
+};
+
+struct CarsFrontEndEntityMan {
+    bool unknown;
+    bool unknown2;
+    DynamicArray<int> unknown3;
+};
+
 class CarsFrontEnd : public FrontEndLayer {
 public:
     struct FrontendFlashFunctions {
-        char reserved[0x2d8];
+        int unknown0;
+        char* unknown1;
+        char reserved[0x2d0];
     };
     struct UnkFEStruct {
         char reserved[0x14];
     };
 public:
     char unknown3[0x10];
-    int m_uiPlatformSpin;
+    int uiPlatformSpin;
     char unknown4[0x20];
-    unsigned int m_numFilledSaveSlots;
+    unsigned int numFilledSaveSlots;
     FrontEndSaveSlot saveSlots[3];
     unsigned char field25_0x94;
     unsigned char field26_0x95;
@@ -214,33 +235,28 @@ public:
     Genie::Array<float> field50_0xfc;
     FrontendFlashFunctions frontendFlashFunctions;
     Genie::List<HistoryEntry> history;
-    char* miniMenuHistoryText;
-    char* miniMenuTitleText;
-    char* miniMenuTitleImage;
+    Genie::String miniMenuHistoryText;
+    Genie::String miniMenuTitleText;
+    Genie::String miniMenuTitleImage;
     char* missionIdStr2;
     char* missionIdStr;
-    char* unkLockStateList;
+    Genie::String unkLockStateList;
     unsigned int unkUnused;
-    char clearanceMissionIndex;
-    unsigned char field61_0x425;
-    unsigned char field62_0x426;
-    unsigned char field63_0x427;
-    unsigned char field64_0x428;
-    unsigned char field65_0x429;
-    unsigned char field66_0x42a;
-    unsigned char field67_0x42b;
-    char* freeplaySettingDescriptionsString;
-    char* gameTypeString;
-    char* freeplaySettingOptionsString;
-    char* freeplaySettingDescriptions[6];
-    char* freeplaySettingOptionsList[6];
-    char* squadSeriesFreeplaySettingDescriptionString;
-    unsigned char field73_0x46c[4];
-    int field81_0x470;
-    unsigned char field82_0x474[68];
-    UnkFEStruct field150_0x4b8[11];
+    char clearanceLevelIndex;
+    Genie::String freeplayUnknownUnusedString;
+    Genie::String freeplaySettingDescriptionsString;
+    Genie::String gameTypeString;
+    Genie::String freeplaySettingOptionsString;
+    Genie::String freeplaySettingDescriptions[6];
+    Genie::String freeplaySettingOptionsList[6];
+    Genie::String squadSeriesFreeplaySettingDescriptionString;
+    unsigned int field73_0x46c;
+    CarsFrontEndActorMan cssCarsActorMan;
+    CarsFrontEndActorMan guestCarsActorMan;
+    CarsFrontEndEntityMan entityMan;
+    UnkFEStruct unkFeStructs[11];
     unsigned int field151_0x594;
-    char* field152_0x598;
+    const char* field152_0x598;
     unsigned char field153_0x59c[516];
     float attractTimer;
     float field670_0x7a4;
@@ -251,11 +267,11 @@ public:
     unsigned char field675_0x7af;
     float field676_0x7b0;
     unsigned int field677_0x7b4;
-    unsigned char field678_0x7b8;
+    bool shouldLaunchGame;
     unsigned char field679_0x7b9;
     unsigned char field680_0x7ba;
     unsigned char field681_0x7bb;
-    unsigned char shouldReleaseMiniMenu;
+    bool shouldReleaseMiniMenu;
     unsigned char field683_0x7bd;
     unsigned char field684_0x7be;
     unsigned char field685_0x7bf;

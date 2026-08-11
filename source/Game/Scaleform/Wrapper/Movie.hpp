@@ -6,6 +6,8 @@
 
 inline auto Flash_Movie_SetImageLoader = (void(__thiscall*)(void*, void*))(0x01168bc0);
 inline auto Flash_Movie_HandleInput = (bool(__thiscall*)(void*, bool, int))(0x01168be0);
+inline auto Flash_Movie_SetLoadMovie = (void(__thiscall*)(void*, const char*, float, float))(0x011676e0);
+inline auto Flash_Movie_CallFlashFunction = (void(__cdecl*)(void*, const char*, void*,...))(0x01168690);
 
 namespace Flash {
 	class Movie {
@@ -18,8 +20,18 @@ namespace Flash {
 		inline void SetImageLoader(void* imageLoader) {
 			Flash_Movie_SetImageLoader(this, imageLoader);
 		}
+
 		inline bool HandleInput(bool doLockedPlayerInput, int forceID) {
 			return Flash_Movie_HandleInput(this, doLockedPlayerInput, forceID);
+		}
+		
+		inline void SetLoadMovie(const char* name, float x, float y) {
+			Flash_Movie_SetLoadMovie(this, name, x, y);
+		}
+
+		template <typename... Args>
+		inline void CallFlashFunction(const char* functionName, void* returnValue, Args&&... args) {
+			Flash_Movie_CallFlashFunction(this, functionName, returnValue, std::forward<Args>(args)...);
 		}
 	};
 };

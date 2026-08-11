@@ -7,7 +7,7 @@ inline auto GameProgressionManager_GetAICarCount = (int(__thiscall*)(class GameP
 inline auto GameProgressionManager_SetAICarCount = (void(__thiscall*)(class GameProgressionManager*, int))(0x004eadc0);
 inline auto GameProgressionManager_SetMissionTimeByMode = (void(__thiscall*)(class GameProgressionManager*, bool))(0x004e8400);
 inline auto GameProgressionManager_FUN_004ebab0 = (void(__thiscall*)(class GameProgressionManager*, int))(0x004ebab0);
-inline auto GameProgressionManager_FUN_004ebaf0 = (void(__thiscall*)(class GameProgressionManager*, int))(0x004ebaf0);
+inline auto GameProgressionManager_SetSquadSeriesEntryToDefaults = (void(__thiscall*)(class GameProgressionManager*, int))(0x004ebaf0);
 inline auto GameProgressionManager_FormatStoryMission = (char* (__thiscall*)(class GameProgressionManager*, int, int))(0x004eaf90);
 
 class GameProgressionManager {

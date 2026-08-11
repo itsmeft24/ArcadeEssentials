@@ -47,14 +47,14 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <OutDir>C:\Projects\OctaneEngine\Cars2\C2A\Pentane\Plugins</OutDir>
+    <OutDir>C:\Projects\OctaneEngine\Cars2\C2A\Pentane\Plugins\</OutDir>
     <TargetName>$(ProjectName)</TargetName>
     <TargetExt>.dll</TargetExt>
     <IncludePath>.\dependencies\sunset\cpp;.\dependencies\steam\include;$(IncludePath)</IncludePath>
     <LibraryPath>.\dependencies\steam\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <OutDir>C:\Projects\OctaneEngine\Cars2\C2A\Pentane\Plugins</OutDir>
+    <OutDir>C:\Projects\OctaneEngine\Cars2\C2A\Pentane\Plugins\</OutDir>
     <TargetName>$(ProjectName)</TargetName>
     <TargetExt>.dll</TargetExt>
     <IncludePath>.\dependencies\sunset\cpp;.\dependencies\steam\include;$(IncludePath)</IncludePath>
@@ -84,7 +84,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <ModuleDefinitionFile>plugin.def</ModuleDefinitionFile>
       <GenerateMapFile>true</GenerateMapFile>
-      <AdditionalDependencies>WinUSB.lib;d3d9.lib;Dwmapi.lib;OneCoreUAP.lib;Shlwapi.lib;Imm32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>steam_api.lib;WinUSB.lib;d3d9.lib;Dwmapi.lib;OneCoreUAP.lib;Shlwapi.lib;Imm32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>
@@ -109,7 +109,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <ModuleDefinitionFile>plugin.def</ModuleDefinitionFile>
-      <AdditionalDependencies>WinUSB.lib;d3d9.lib;Dwmapi.lib;OneCoreUAP.lib;Shlwapi.lib;Imm32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>steam_api.lib;WinUSB.lib;d3d9.lib;Dwmapi.lib;OneCoreUAP.lib;Shlwapi.lib;Imm32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
     </Link>
     <PostBuildEvent>
