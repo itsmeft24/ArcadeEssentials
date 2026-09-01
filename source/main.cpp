@@ -1911,6 +1911,7 @@ extern "C" void __stdcall Pentane_Main() {
 		sunset::inst::push_u32(reinterpret_cast<void*>(0x0080cf64), sizeof(WindowsSystemInputDriver)); // Patch argument to operator.new
 		sunset::inst::call(reinterpret_cast<void*>(0x0080cf8d), reinterpret_cast<void*>(0x00814fa0)); // Replace call to constructor
 		sunset::inst::call(reinterpret_cast<void*>(0x0080da31), WindowsSystemInputDriver_Initialize); // Replace call to ::Initialize member function
+		sunset::inst::call(reinterpret_cast<void*>(0x0080d5a3), reinterpret_cast<void*>(0x00815e30)); // Replace call to ::Shutdown member function
 
 		// Stubs the function that otherwise triggers a a system reboot (What the actual fuck RT??)
 		sunset::utils::set_permission(reinterpret_cast<void*>(0x00458680), 1, sunset::utils::Perm::ExecuteReadWrite);
