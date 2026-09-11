@@ -1784,6 +1784,30 @@ DefineReplacementHook(ErrorPopup_HideControllerPullMessage_HandleMessage) {
 	}
 };
 
+// Fixes #2, Skinned choreographies anchor properly. Enjoy the math.
+DefineInlineHook(SkinBB_Relativise) {
+	// 00863874: after each bone in SubGeometryNode::FUN_008634c0.
+	// Billboard path bakes the world matrix into the bone; pre-apply W^-1 so the shader's W cancels out.
+	static void __cdecl callback(sunset::InlineCtx & ctx) {
+		auto ebp = ctx.ebp.unsigned_integer;
+		if (!*reinterpret_cast<unsigned char*>(ebp - 0x89)) return;                      // local_99: not billboard path
+		const float* w = *reinterpret_cast<float**>(ctx.ebx.unsigned_integer + 8);       // param_2 (world)
+		float* m = *reinterpret_cast<float**>(*reinterpret_cast<std::uintptr_t*>(ebp - 0x14) + 0x110)
+			+ *reinterpret_cast<unsigned*>(ebp - 0x98) * 16;                         // m_BoneMatrices[slot]
+		const float* a = w, * b = w + 4, * c = w + 8;                                      // rotation/scale rows of W
+		const float cr[3][3] = {                                                          // adj(R) columns: b×c, c×a, a×b
+			{ b[1] * c[2] - b[2] * c[1], b[2] * c[0] - b[0] * c[2], b[0] * c[1] - b[1] * c[0] },
+			{ c[1] * a[2] - c[2] * a[1], c[2] * a[0] - c[0] * a[2], c[0] * a[1] - c[1] * a[0] },
+			{ a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0] } };
+		const float det = a[0] * cr[0][0] + a[1] * cr[0][1] + a[2] * cr[0][2];
+		if (det > -1e-20f && det < 1e-20f) return;                                        // zero scale: leave as-is
+		for (float* r = m; r < m + 16; r += 4) {                                         // M = M * W^-1 (affine)
+			const float v[3] = { r[0] - r[3] * w[12], r[1] - r[3] * w[13], r[2] - r[3] * w[14] };
+			for (int j = 0; j < 3; ++j) r[j] = (v[0] * cr[j][0] + v[1] * cr[j][1] + v[2] * cr[j][2]) / det;
+		}
+	}
+};
+
 extern "C" void __stdcall Pentane_Main() {
 	// FIXME: link against Pentane.lib properly instead of this bullshit!!!!
 	Pentane_LogUTF8 = reinterpret_cast<void(*)(PentaneCStringView*)>(GetProcAddress(GetModuleHandleA("Pentane.dll"), "Pentane_LogUTF8"));
@@ -2236,6 +2260,11 @@ extern "C" void __stdcall Pentane_Main() {
 		CarsFrontEnd_ShowControllerPull_HandleMessage::install_at_ptr(0x004c5c50);
 		ErrorPopup_HideControllerPullMessage_HandleMessage::install_at_ptr(0x00e9fef0);
 
+		// Fixes #2, Skinned choreographies now anchor properly
+		sunset::utils::set_permission(reinterpret_cast<void*>(0x00863986), 1, sunset::utils::Perm::ExecuteReadWrite);
+		*reinterpret_cast<unsigned char*>(0x00863986) = 0xEB;   // skip Identity(param_2)
+		SkinBB_Relativise::install_at_ptr(0x00863874);
+		
 		install_fmv_driver();
 
 		logger::log("[ArcadeEssentials::Pentane_Main] Installed hooks!");
