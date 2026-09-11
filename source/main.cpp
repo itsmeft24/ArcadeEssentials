@@ -231,9 +231,15 @@ DefineReplacementHook(OnConfirmHook) {
 			}
 			std::uintptr_t game_settings = *reinterpret_cast<std::uintptr_t*>(0x0192b8a8);
 			std::uintptr_t unk = *reinterpret_cast<std::uintptr_t*>(game_settings + 0x8);
-			GameCommon_SetPlayerMusicVolume(*g_Game, *reinterpret_cast<float*>(unk + 4), 0);
-			GameCommon_SetPlayerSfxVolume(*g_Game, *reinterpret_cast<float*>(unk + 8), 0);
-			GameCommon_SetPlayerDialogueVolume(*g_Game, *reinterpret_cast<float*>(unk + 12), 0);
+			float music = 1.0f, sfx = 1.0f, dialogue = 1.0f;
+			if (unk != 0 && _this->saveSlots[index].isFilled) {
+				music = *reinterpret_cast<float*>(unk + 4);
+				sfx = *reinterpret_cast<float*>(unk + 8);
+				dialogue = *reinterpret_cast<float*>(unk + 12);
+			}
+			GameCommon_SetPlayerMusicVolume(*g_Game, music, 0);
+			GameCommon_SetPlayerSfxVolume(*g_Game, sfx, 0);
+			GameCommon_SetPlayerDialogueVolume(*g_Game, dialogue, 0);
 			_CarsFrontEnd_SetScreen(_this, CarsFrontEndScreen::MT_FrontEnd, nullptr, true);
 			should_play_item_selected = false;
 		}
